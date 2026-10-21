@@ -1,0 +1,28 @@
+{
+  "title": "Wednesday briefing",
+  "blocks": [
+    {"type": "heading", "text": "Today"},
+    {"type": "row", "left": "09:30 Design review: relay API", "right": "Room 4"},
+    {"type": "row", "left": "12:00 Lunch with Priya", "right": "Ponsonby"},
+    {"type": "row", "left": "16:00 1:1 with Sam", "right": "Zoom"},
+    {"type": "text", "text": "Two emails need a reply today: the Q4 budget sign-off from Dana (due 17:00) and the venue contract from Harbour Events."},
+    {"type": "divider"},
+    {"type": "heading", "text": "Your field"},
+    {"type": "heading", "level": 2, "text": "Apple ships visionOS 3 with shared spatial anchors"},
+    {"type": "text", "text": "Anchors can now be shared across nearby devices without a cloud round-trip. Developer beta is out; public release is set for December.", "url": "https://developer.apple.com/visionos/whats-new/"},
+    {"type": "bullet", "text": "CHI 2027 paper deadline moved to 12 September.", "url": "https://chi2027.acm.org/for-authors/deadlines/"},
+    {"type": "bullet", "text": "r/augmentedreality top post: hand-tracking latency benchmarks across five headsets.", "url": "https://www.reddit.com/r/augmentedreality/comments/1abc234/handtracking_latency/"},
+    {"type": "divider"},
+    {"type": "heading", "text": "Jobs"},
+    {"type": "bullet", "text": "Senior XR Engineer, Meta Reality Labs, Auckland or remote. Applications close 4 Nov.", "url": "https://www.metacareers.com/jobs/1234567890/"},
+    {"type": "bullet", "text": "Research Scientist, HCI, Google DeepMind London.", "url": "https://deepmind.google/about/careers/?gh_jid=987654&utm_source=newsletter"},
+    {"type": "divider"},
+    {"type": "heading", "text": "Markets"},
+    {"type": "row", "left": "AAPL", "right": "$231.40  +1.2%"},
+    {"type": "row", "left": "NVDA", "right": "$148.02  -0.4%"},
+    {"type": "row", "left": "NZX 50", "right": "12,481  +0.3%"},
+    {"type": "divider"},
+    {"type": "qr", "url": "https://developer.apple.com/visionos/whats-new/", "caption": "Read the visionOS 3 notes"},
+    {"type": "small", "text": "Compiled by your assistant from your calendar, inbox and saved feeds. Prices at previous close."}
+  ]
+}
