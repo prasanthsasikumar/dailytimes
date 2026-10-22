@@ -1,19 +1,24 @@
-# Relay only. The device agent runs next to the printer (see deploy/).
-# Put it behind a TLS reverse proxy (Caddy, nginx, Traefik) at e.g. https://times.example.com.
+# The Daily Times server (website + relay + MCP) with SQLite on a volume.
+# Copy .env.example to .env and fill it in. Put a TLS reverse proxy in front
+# (Caddy: `times.example.com { reverse_proxy 127.0.0.1:8787 }`).
 services:
-  relay:
+  dailytimes:
     build: .
-    image: dailytimes-relay:latest
+    image: dailytimes:latest
     restart: unless-stopped
+    env_file: .env
     ports:
-      - "127.0.0.1:8787:8787"   # proxy terminates TLS; don't expose plain HTTP publicly
-    environment:
-      DAILYTIMES_PUBLIC_URL: ${DAILYTIMES_PUBLIC_URL:-http://localhost:8787}
-      DAILYTIMES_ADMIN_TOKEN: ${DAILYTIMES_ADMIN_TOKEN:?set an admin token for device registration}
-      DAILYTIMES_INBOUND_DOMAIN: ${DAILYTIMES_INBOUND_DOMAIN:-in.example.com}
-      DAILYTIMES_INBOUND_SECRET: ${DAILYTIMES_INBOUND_SECRET:-}
+      - "127.0.0.1:8787:8787"
     volumes:
       - dailytimes-data:/data
+  # Run the daily job (pre-builds auto editions, applies retention). Optional:
+  # editions are also built on demand when a printer or the dashboard asks.
+  cron:
+    image: curlimages/curl:8.10.1
+    restart: unless-stopped
+    env_file: .env
+    entrypoint: ["sh", "-c", "while true; do curl -fsS -H \"Authorization: Bearer $$CRON_SECRET\" http://dailytimes:8787/cron/daily; sleep 3600; done"]
+    depends_on: [dailytimes]
 
 volumes:
   dailytimes-data:

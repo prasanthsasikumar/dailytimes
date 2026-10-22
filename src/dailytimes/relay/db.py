@@ -175,4 +175,7 @@ def database_from_env() -> Database:
     key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if url and key:
         return SupabaseDB(url, key, schema=os.environ.get("SUPABASE_SCHEMA") or None)
+    if os.environ.get("VERCEL"):
+        raise RuntimeError("On Vercel the filesystem is read-only: set SUPABASE_URL and SUPABASE_SERVICE_KEY "
+                           "(and load supabase/schema.sql once). See DEPLOY.md.")
     return SQLiteDB(os.environ.get("DAILYTIMES_DB", "dailytimes.db"))

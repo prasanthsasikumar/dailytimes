@@ -67,7 +67,7 @@ class Settings:
         for k, v in overrides.items():
             setattr(s, k, v)
         if not s.secret:
-            if not s.dev and s.public_url.startswith("https://"):
+            if not s.dev and (s.public_url.startswith("https://") or os.environ.get("VERCEL")):
                 raise RuntimeError("DAILYTIMES_SECRET must be set in production (e.g. `openssl rand -hex 32`)")
             s.secret = secrets.token_hex(32)
             log.warning("DAILYTIMES_SECRET not set: using a random one, sessions end when the server restarts")

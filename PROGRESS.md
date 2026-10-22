@@ -7,6 +7,9 @@
 - [x] M4 Device agent: polling, presence backends, print rules, status reporting
 - [x] M5 SETUP_PROMPT.md, deploy files (docker-compose, systemd, launchd), README, demo.sh
 
+- [x] M6 Hosted platform: accounts + website, write-only AI endpoint, printer pairing, auto editions, Supabase storage
+- [x] M7 Vercel/Docker deployment, setup wizard, docs (DEPLOY.md, PRIVACY.md)
+
 ## Decisions (ambiguities resolved with the simplest reasonable option)
 - **One token per device.** The same token is used by the assistant (MCP/webhook/email) and the device agent. Simpler to set up; a leaked token can at worst queue or mark briefs.
 - **MCP auth** accepts `Authorization: Bearer` or `?token=` on the URL, because several connector UIs only take a URL. No OAuth in the MVP.
@@ -42,11 +45,29 @@
 - **Full-page A4/Letter** (`fill_page: true` on a4, letter, a5): the layout picks the largest type scale in 0.85x-1.3x at which the brief fits exactly one page, by binary search over full layouts. Light briefs grow (capped so it never looks like large print); briefs that would spill a few lines are tightened back onto one page; longer ones keep normal size and paginate. Filling the page with *content* is the assistant's job: the tool description and SETUP_PROMPT now ask for 35-50 blocks on a page printer, 10-20 on receipts, with extra sections (weather, week ahead, papers, deadlines).
 - **Samples are fictional** (Example Corp, example.com links, "Sample edition" title) so placeholder data can't be mistaken for real news or the user's own calendar. `examples/full_page_brief.json` is a 45-block full-page sample.
 
+### Platform (M6–M7)
+- **One Python app** serves the website, relay API, MCP and printer API, so there's one thing to deploy and one language to contribute in. Server-rendered Jinja pages with no client framework and no third-party scripts; fonts are served from the package.
+- **Storage** goes through a deliberately small table API (`relay/db.py`) with two backends: SQLite for local/Docker, and Supabase via PostgREST over HTTPS for Vercel (serverless can't hold Postgres connections, and the FlowsXR Supabase doesn't expose Postgres publicly). Queue logic stays in Python, the same for both backends; the few multi-step writes aren't transactional, which is harmless at this scale (worst case: two pending briefs, and the newest is served). The store tests run against both, via `scripts/test_postgrest.sh` (real Postgres 17 + PostgREST 16.5 + Supabase roles).
+- **Tables are prefixed `dt_` in `public`**, the simplest thing that works on any Supabase project, including a shared one, without server config changes. RLS is on with no policies; only the service key reads or writes.
+- **Accounts own editions; printers own receipts.** One edition per user per day, newest wins; each printer prints it at most once per local day. Dedup history is per user and recorded when any printer prints.
+- **Tokens split by capability**: a write-only *endpoint token* (`dts_`) for AI agents, put in the URL path (`/u/<token>/mcp`, `/u/<token>/brief`) because connector UIs often accept only a URL; *printer tokens* (`dtd_`) can only read today's edition and report status. Both are stored as SHA-256 hashes and shown once. This replaces M1's single token per device.
+- **Sign-in is our own email magic link** (not Supabase Auth), so self-hosters need no Supabase at all and the browser never talks to the database. Links are single use, 15 minutes, rate-limited, and need a button press (mail scanners prefetch links). Sessions are HMAC-signed cookies with a per-user epoch for "sign out everywhere"; forms carry CSRF tokens. Mail goes via the Resend API, SMTP, or the log (dev).
+- **Pairing**: 8-character codes from an unambiguous alphabet, 15 minutes, single use; `dailytimes setup` redeems one, discovers printers, picks a profile, test-prints and writes a mode-600 config. `dailytimes service` prints the systemd/launchd file for the machine.
+- **Auto edition** is deterministic: headlines, titles and numbers exactly as published by keyless public sources (Google News RSS search, Hacker News Algolia, Reddit RSS, arXiv, Yahoo Finance chart API, Open-Meteo, user feeds). No LLM writes text, so nothing can be invented. Sources share the page fairly (32 linked items for a page, 12 for a slip), already-printed links are skipped, and a failing source just drops its section. Reddit's JSON API returns 403 to servers, so the RSS feed is used; Stooq is blocked, so Yahoo is used for quotes.
+- **When the auto edition is built**: lazily, the first time a printer, the dashboard or the daily cron asks after the user's `auto_after` time, only if no AI sent one, and at most once per day (the day is claimed before fetching). An AI edition arriving later still wins, unless a printer already printed that day.
+- **Interest suggestion** is a keyword heuristic by default (the text never leaves the server), with acronym expansion (HCI -> human-computer interaction, after "HCI" matched an insurer). If the operator sets `ANTHROPIC_API_KEY`, Claude (`claude-opus-5-5`, low effort, server-side refusal fallback) proposes sources instead, and the page says so. Either way the user reviews and edits.
+- **User feed URLs are fetched with SSRF protection** (public IPs only, re-checked on each redirect, size/time caps). Known gap: DNS-rebinding race, documented in PRIVACY.md.
+- **MCP is built per request** (fresh stateless server and session manager), because serverless hosts may not run ASGI lifespan events, which the SDK's session manager depends on.
+- **Vercel**: `api/index.py` + `vercel.json` (all routes to one function, `includeFiles: src/**`, a daily cron, which is the Hobby limit and enough since editions build on demand). The app refuses to start on Vercel without Supabase or without `DAILYTIMES_SECRET` (a random per-instance secret would sign people out on every cold start).
+- **Retention**: editions and receipts 30 days, seen-link history 60 days, codes/links minutes; purged at most hourly on writes and by the daily cron.
+
 ## Status
-All milestones done. `pytest`: 118 passed. `scripts/demo.sh` produces `out/brief-thermal-58mm.png`, `brief-thermal-80mm.png`, `brief-a4.pdf`, `brief-letter.pdf`, all reviewed visually; QR codes in all four decode correctly (OpenCV).
+All milestones done. `pytest`: 155 passed; `scripts/test_postgrest.sh`: 32 passed (store suite on SQLite and on Postgres+PostgREST). `scripts/demo.sh` produces `out/brief-thermal-58mm.png`, `brief-thermal-80mm.png`, `brief-a4.pdf`, `brief-letter.pdf`, all reviewed visually; QR codes in all four decode correctly (OpenCV).
 
 ## Not done / next
 - Cat printer BLE transport (encoder done), BLE presence is a sketch, IMAP inbound transport is a stub.
-- No OAuth for MCP; the token-in-URL is the credential. Add OAuth (MCP auth spec) before public multi-user use.
+- No OAuth for MCP; the token-in-URL is the credential (rotatable, write-only). OAuth per the MCP auth spec is the next step for a public service.
+- Not deployed anywhere yet: Vercel and Supabase setup are documented and the Supabase path is tested against PostgREST locally, but no live deploy was made.
+- Email delivery (Resend/SMTP) and the optional Claude suggestion are exercised only with fakes in tests.
 - No hardware was attached during development: CUPS, ESC/POS, IPP and SMTP are exercised in dry-run and against fakes, not real printers.
 - IPP direct send assumes the printer accepts PDF; PWG-raster/URF encoding for printers that don't is not implemented (the error message points to a driverless CUPS queue instead).

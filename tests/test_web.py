@@ -70,7 +70,6 @@ def test_sign_up_flow_and_single_use_link(client):
     assert r.status_code == 400 and "expired" in r.text
     # second sign-in is the same account and goes to the dashboard
     client.cookies.clear()
-    import datetime as dt
     store = client.app_state.store
     store.db.update("dt_logins", {"created_at": "2000-01-01T00:00:00+00:00"}, eq={"email": "reader@example.com"})
     r, _ = sign_up(client)
@@ -170,7 +169,7 @@ def test_two_printers_each_print_once(client):
     sign_up(client)
     store = client.app_state.store
     user = store.user_by_email("reader@example.com")
-    (d1, t1), (d2, t2) = store.create_device(user, "A"), store.create_device(user, "B")
+    (_, t1), (_, t2) = store.create_device(user, "A"), store.create_device(user, "B")
     send = store.rotate_send_token(user)
     client.post("/v1/briefs", json={"blocks": [{"type": "text", "text": "hello"}]},
                 headers={"Authorization": f"Bearer {send}"})

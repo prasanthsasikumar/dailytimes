@@ -1,0 +1,9 @@
+.venv
+.cache
+out
+tests
+examples
+scripts
+deploy
+docs
+*.db

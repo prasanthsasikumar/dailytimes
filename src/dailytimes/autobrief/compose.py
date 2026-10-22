@@ -80,44 +80,46 @@ def build_auto_brief(interests: Interests, size: str = "page", seen: set[str] | 
                 break
         return keep
 
-    def section(title: str, items: list[sources.Item]) -> None:
+    credited: list[str] = []
+
+    def credit(name: str) -> None:
+        if name not in credited:
+            credited.append(name)
+
+    def section(title: str, items: list[sources.Item], source: str) -> None:
         if not items:
             return
+        credit(source)
         blocks.append({"type": "heading", "text": title[:1].upper() + title[1:]})
         for it in items:
             blocks.append({"type": "bullet", "text": it.text[:300], **({"url": it.url} if it.url else {})})
 
     rows = [r for r in [got.get("weather")] if r]
     if rows:
+        credit("Open-Meteo")
         blocks.append({"type": "heading", "text": "Today"})
         blocks += [{"type": "row", "left": r.left[:60], "right": r.right[:40]} for r in rows]
 
     for t in interests.topics:
-        section(t[:80], fresh(got.get(f"topic:{t}"), per["topic"]))
+        section(t[:80], fresh(got.get(f"topic:{t}"), per["topic"]), "Google News")
     papers = [it for c in interests.arxiv for it in fresh(got.get(f"arxiv:{c}"), per["arxiv"])]
-    section("New papers", papers)
+    section("New papers", papers, "arXiv")
     posts = [it for s in interests.subreddits for it in fresh(got.get(f"reddit:{s}"), per["reddit"])]
-    section("Communities", posts)
+    section("Communities", posts, "Reddit")
     feeds = [it for f in interests.feeds for it in fresh(got.get(f"feed:{f}"), per["feed"])]
-    section("Your feeds", feeds)
+    section("Your feeds", feeds, "your feeds")
     if interests.hacker_news:
-        section("Hacker News", fresh(got.get("hn"), per["hn"]))
+        section("Hacker News", fresh(got.get("hn"), per["hn"]), "Hacker News")
 
     quotes = [got.get(f"quote:{t}") for t in interests.tickers]
     quotes = [q for q in quotes if q]
     if quotes:
+        credit("Yahoo Finance")
         blocks.append({"type": "heading", "text": "Markets"})
         blocks += [{"type": "row", "left": q.left, "right": q.right} for q in quotes]
 
     if not any(b["type"] in ("bullet", "row") for b in blocks):
         return None
-    names = []
-    if any(k.startswith("topic:") for k in got):
-        names.append("Google News")
-    for key, name in (("hn", "Hacker News"), ("arxiv:", "arXiv"), ("reddit:", "Reddit"), ("quote:", "Yahoo Finance"),
-                      ("weather", "Open-Meteo"), ("feed:", "your feeds")):
-        if any(k.startswith(key) for k in got) and name not in names:
-            names.append(name)
     blocks.append({"type": "small", "text": "Auto edition: headlines and numbers exactly as published by "
-                   + ", ".join(names) + ". Connect an AI assistant for a personal edition with your calendar and mail."})
+                   + ", ".join(credited) + ". Connect an AI assistant for a personal edition with your calendar and mail."})
     return Brief.model_validate({"blocks": blocks, "title": "Auto edition"})

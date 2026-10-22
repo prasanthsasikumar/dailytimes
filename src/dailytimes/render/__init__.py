@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from PIL import Image
 
 from ..blocks import Brief
-from .layout import Document, layout
+from .layout import layout
 from .pdf import render_pdf
 from .profiles import Profile, list_profiles, load_profile
 from .raster import render_raster

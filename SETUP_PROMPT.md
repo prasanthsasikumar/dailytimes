@@ -4,10 +4,14 @@ This prompt turns your AI assistant into the editor of a one-page personal paper
 when you walk up to your printer. It works best with an assistant that already knows you
 (memory, past chats) and can see your calendar and email through connectors.
 
-## 1. Connect the assistant to your relay
+## 1. Connect the assistant to your Daily Times
 
-You need the `mcp_url` from registering your printer (`dailytimes register ...`). It looks like
-`https://times.example.com/mcp?token=dt_...`. Treat it like a password.
+You need your endpoint: on the website, open **Connect AI** and press *Create my endpoint*
+(headless installs get it from `dailytimes register`). The MCP URL looks like
+`https://times.example.com/u/dts_.../mcp`. Treat it like a password: it can only add editions
+to your paper, but anyone who has it can do that. You can replace it any time.
+
+The website shows this prompt already filled in with your interests and paper size.
 
 - **Claude** (claude.ai or desktop): Settings → Connectors → *Add custom connector* → paste the
   `mcp_url`. Enable it in the chat where you paste the prompt below. Calendar and Gmail
@@ -17,7 +21,7 @@ You need the `mcp_url` from registering your printer (`dailytimes register ...`)
 - **Codex / Claude Code / any agent with a shell**: add the MCP server
   (`claude mcp add --transport http dailytimes "<mcp_url>"`, or `[mcp_servers.dailytimes] url = "<mcp_url>"`
   in `~/.codex/config.toml`), or skip MCP and `POST` the JSON brief to `webhook_url` with
-  `Authorization: Bearer <token>`.
+  no extra headers (the token is in the URL): `.../u/dts_.../brief`.
 - **Assistants that can only send email**: send the brief as the email body to your
   `email_address` (`brief+<token>@...`), either JSON or the plain-text format in the README.
 

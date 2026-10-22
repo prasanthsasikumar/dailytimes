@@ -46,6 +46,10 @@ VERBS = {"follow", "hold", "like", "love", "watch", "read", "enjoy", "work", "li
 _TICKER = re.compile(r"\$([A-Za-z][A-Za-z.]{0,7})\b")
 _SUB = re.compile(r"\br/([A-Za-z0-9_]{2,21})\b")
 _PLACE = re.compile(r"\b(?:live|living|based|located)\s+in\s+([A-Z][\w\- ]{1,40}?)(?:[,.;\n]|$)")
+# weaker: "a designer in Wellington." (capitalised word(s), not an acronym); the user reviews it
+_IN_PLACE = re.compile(r"\bin\s+([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)(?=[,.;\n]|$)")
+_ROLE = re.compile(r"\b(researcher|engineer|designer|developer|scientist|student|manager|lecturer|professor|"
+                   r"analyst|consultant)s?\b", re.I)
 
 
 def heuristic(about: str) -> tuple[Interests, str | None]:
@@ -58,16 +62,19 @@ def heuristic(about: str) -> tuple[Interests, str | None]:
         if re.search(pattern, text, re.I):
             arxiv += [c for c in cats if c not in arxiv]
             hn = hn or follow_hn
-    stripped = _SUB.sub(" ", _TICKER.sub(" ", _PLACE.sub(" ", text)))
+    place = _PLACE.search(text) or _IN_PLACE.search(text)
+    stripped = _SUB.sub(" ", _TICKER.sub(" ", text))
+    if place:
+        stripped = stripped.replace(place.group(0), " ")
     topics = []
     for part in re.split(r"[,;\n]|\band\b|\.\s", stripped):
         p = part.strip(" .!?-")
         for _ in range(3):
             p = STOP.sub("", p)
+        p = _ROLE.sub("", p).strip()  # "UX researcher" -> "UX"
         p = re.sub(r"\b(" + "|".join(ALIASES) + r")\b", lambda m: ALIASES[m.group(1).lower()], p, flags=re.I)
         if 1 < len(p) <= 60 and len(p.split()) <= 5 and p.lower() not in VERBS:
             topics.append(p)
-    place = _PLACE.search(text)
     data = {"about": text[:1000], "topics": topics[:6], "subreddits": subs[:6], "tickers": tickers[:10],
             "arxiv": arxiv[:5], "hacker_news": hn}
     return Interests.model_validate(data), (place.group(1).strip() if place else None)

@@ -29,26 +29,30 @@ TZ_NAME=${TZ_NAME:-$("$PY" -c "import os; p=os.path.realpath('/etc/localtime'); 
 
 rm -rf "$WORK" "$OUT"/brief-*; mkdir -p "$WORK"
 
-step "1. Start the relay on $RELAY"
-DAILYTIMES_ADMIN_TOKEN="" "${DT[@]}" relay --host 127.0.0.1 --port "$RELAY_PORT" --db "$WORK/relay.db" \
-  --public-url "$RELAY" --log-level warning >"$WORK/relay.log" 2>&1 &
+ADMIN=demo-admin-$RANDOM
+step "1. Start the server on $RELAY"
+DAILYTIMES_ADMIN_TOKEN="$ADMIN" DAILYTIMES_DEV=1 "${DT[@]}" serve --host 127.0.0.1 --port "$RELAY_PORT" \
+  --db "$WORK/relay.db" --public-url "$RELAY" --log-level warning >"$WORK/relay.log" 2>&1 &
 PIDS+=($!)
 wait_for "$RELAY/healthz" relay
 echo "relay up"
 
-step "2. Register a device"
-REG=$("${DT[@]}" register --relay "$RELAY" --name "Demo kitchen printer" --timezone "$TZ_NAME")
-TOKEN=$(echo "$REG" | json "['token']")
-echo "$REG" | json "['device_id']" | sed "s|^|device: |; s|$| ($TZ_NAME)|"
-echo "$REG" | json "['mcp_url']" | sed "s/$TOKEN/<token>/" | sed 's/^/MCP URL for the assistant: /'
+step "2. Create an account with one printer (headless; on the website this is sign-up + pairing)"
+REG=$("${DT[@]}" register --relay "$RELAY" --name "Demo kitchen printer" --timezone "$TZ_NAME" --admin-token "$ADMIN")
+TOKEN=$(echo "$REG" | json "['token']")          # the printer's token (read today's brief, report status)
+SEND=$(echo "$REG" | json "['send_token']")      # the AI agents' write-only token
+MCP_URL=$(echo "$REG" | json "['mcp_url']")
+WEBHOOK_URL=$(echo "$REG" | json "['webhook_url']")
+echo "$REG" | json "['device_id']" | sed "s|^|printer: |; s|$| ($TZ_NAME)|"
+echo "unique endpoint for any AI agent: ${MCP_URL/$SEND/<token>}"
 
 step "3. Send an early draft via the HTTPS webhook (markdown-ish text)"
-curl -fsS -X POST "$RELAY/v1/briefs" -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: text/markdown" -H "X-Brief-Title: Early draft" --data-binary @examples/draft_brief.md
+curl -fsS -X POST "$WEBHOOK_URL" -H "Content-Type: text/markdown" -H "X-Brief-Title: Early draft" \
+  --data-binary @examples/draft_brief.md
 echo
 
 step "4. Send the final brief via MCP (tools/call print_brief), as an assistant would"
-"${DT[@]}" send examples/sample_brief.json --relay "$RELAY" --token "$TOKEN" --via mcp | tee "$WORK/mcp.json"
+"${DT[@]}" send examples/sample_brief.json --endpoint "$MCP_URL" | tee "$WORK/mcp.json"
 BRIEF_ID=$(json "['brief_id']" <"$WORK/mcp.json")
 grep -q '"superseded": 1' "$WORK/mcp.json" && echo "-> newest brief of the day wins: the webhook draft was superseded"
 

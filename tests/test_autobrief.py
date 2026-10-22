@@ -110,6 +110,8 @@ def test_build_auto_brief_composition(monkeypatch):
     assert "https://ex.com/ai/0" not in urls  # already seen
     assert len(urls) == len(set(urls))
     assert b.title == "Auto edition" and b.blocks[-1].type == "small" and "exactly as published" in b.blocks[-1].text
+    assert "arXiv" not in b.blocks[-1].text  # only sources that contributed are credited
+    assert "Open-Meteo" in b.blocks[-1].text and "Reddit" in b.blocks[-1].text
     slip = build_auto_brief(i, "slip")
     assert len(slip.blocks) < len(b.blocks)
     assert build_auto_brief(Interests(), "page") is None

@@ -18,7 +18,7 @@ from qrcode.constants import ERROR_CORRECT_M
 
 from ..blocks import Brief, short_link
 from . import fonts
-from .profiles import MM, Profile
+from .profiles import Profile
 
 NAMEPLATE = "The Daily Times"
 BLACK = "#000000"

@@ -1,101 +1,75 @@
 # The Daily Times
 
-Your AI assistant (Claude, ChatGPT, Codex, ...) writes you a short daily brief. It prints on
-**whatever printer you own**, a 58 mm receipt printer, an office laser, a cat printer, an
-email-to-print inkjet, and only **when someone walks up to it**.
+A one-page newspaper about your day, printed on **whatever printer you own**, when someone
+walks up to it.
+
+- **Sign up with an email and say what you're into.** Every morning you get an *auto edition*:
+  headlines, new papers, community posts, prices and weather from public sources, quoted exactly
+  as published.
+- **Connect any AI agent** (Claude, ChatGPT, Codex, Claude Code, n8n, a cron script) to your
+  private endpoint and it sends a richer *personal edition* using what it can see: your
+  calendar, inbox, chats. The newest edition of the day wins.
+- **Pair a printer** with a code: a receipt printer, a laser, an inkjet, an email-to-print
+  address, or none (read or print the PDF from the website).
+- **Private by design**: we store an email, interests and 30 days of editions. Never your
+  calendar or mail. Export or delete everything any time. Open source; run your own.
 
 ```
- assistant ──MCP / webhook / email──▶  relay  ◀──poll── device agent ──▶ printer
- (daily task, print_brief tool)       (queue,           (Pi / Mac /       (thermal, CUPS,
-                                       dedup)            Linux box)        IPP, email, file)
-                                                            ▲
-                                                 presence: PIR / mmWave /
-                                                 button / phone / HTTP
+                          ┌──────── The Daily Times server ────────┐
+ any AI agent ──MCP/webhook/email──▶  editions · dedup · accounts    │◀──poll── printer agent ──▶ printer
+ (your endpoint)          │  auto edition from public sources      │          (Pi/Mac/Linux)   (receipt, laser,
+ you ── website ─────────▶│  dashboard · pairing · export/delete   │              ▲             inkjet, email, PDF)
+                          └──── Vercel + Supabase, or Docker/SQLite ┘     presence: sensor, button, phone
 ```
 
-- **Relay** (FastAPI + SQLite): per-device accounts and tokens, one MCP tool `print_brief`,
-  an HTTPS webhook and inbound email. Holds one brief per device per day (the newest wins) and
-  a 60-day history so the same story never prints twice. It stores layout blocks, never pixels,
-  and doesn't know or care what printer you have.
-- **Renderer** (shared library): one layout engine, two renderers: raster at any dot width
-  (384/576/832 px...) and PDF (A4, Letter, A5, receipt-length). Every brief gets a
-  *The Daily Times* nameplate with the date: compact on receipts, a broadsheet masthead on paper.
-- **Adapters**: CUPS/IPP, ESC/POS (USB, serial, network 9100), Bluetooth cat printers (encoder
-  plus stub), email-to-print, file. A new printer type is one adapter plus one profile YAML.
-- **Agent**: polls the relay, waits for presence, prints once per day, reports back.
-
-| 58 mm thermal | A4 / Letter |
+| receipt (58/80 mm) | A4 / Letter |
 |---|---|
-| compact nameplate, inverted section bars, dotted leaders | blackletter masthead, date bar, two balanced columns |
+| compact nameplate, inverted section bars, dotted leaders | blackletter masthead, date bar, two balanced columns, filled to exactly one page |
 
-Run `./scripts/demo.sh` to see all four in `./out`. For a full A4 front page, render
-`examples/full_page_brief.json`: `dailytimes render examples/full_page_brief.json --profile a4`.
-All sample content is fictional placeholder data.
-
-## Quick start (local, five minutes)
+## Try it locally (five minutes)
 
 ```bash
-uv venv && uv pip install -e ".[dev]"          # or: python -m venv .venv && pip install -e ".[dev]"
-.venv/bin/pytest -q                            # 118 tests
-./scripts/demo.sh                              # relay + agent + MCP + webhook + presence -> ./out
+uv venv && uv pip install -e ".[dev]"            # or: python -m venv .venv && pip install -e ".[dev]"
+DAILYTIMES_DEV=1 .venv/bin/dailytimes serve      # http://localhost:8787 (sign-in link shown on screen)
 ```
 
-The demo starts a relay, registers a device, sends a draft brief by webhook and the final one
-over MCP (the draft gets superseded), starts an agent with four file outputs, simulates someone
-walking up, and leaves `out/brief-thermal-58mm.png`, `brief-thermal-80mm.png`, `brief-a4.pdf`
-and `brief-letter.pdf`.
-
-## Set it up for real
-
-### 1. Run the relay
+Sign up, describe your interests, press *Build today's auto edition now*, open the PDF.
 
 ```bash
-export DAILYTIMES_ADMIN_TOKEN=$(openssl rand -hex 24)
-export DAILYTIMES_PUBLIC_URL=https://times.example.com
-docker compose up -d
+.venv/bin/pytest -q            # the test suite
+./scripts/demo.sh              # server + MCP + webhook + printer agent + presence -> ./out (58mm, 80mm, A4, Letter)
+./scripts/test_postgrest.sh    # the storage tests against real Postgres + PostgREST (Supabase's stack)
 ```
 
-Put it behind a TLS reverse proxy (Caddy: `times.example.com { reverse_proxy 127.0.0.1:8787 }`).
-Without Docker: `pip install "dailytimes[relay]" && dailytimes relay`.
+## Run it for real
 
-| env var | meaning |
-|---|---|
-| `DAILYTIMES_DB` | SQLite path (default `./dailytimes.db`, `/data/dailytimes.db` in Docker) |
-| `DAILYTIMES_ADMIN_TOKEN` | required to register devices; if unset, registration is open (dev only) |
-| `DAILYTIMES_PUBLIC_URL` | used to build the URLs returned at registration |
-| `DAILYTIMES_INBOUND_DOMAIN` / `_SECRET` | inbound email address domain / shared secret for `/v1/inbound/email` |
+- **Your own server**: `docker compose up -d` with SQLite on a volume.
+- **Public service**: Vercel (the app) + Supabase (the database).
 
-### 2. Register a printer
+Both are step by step in [DEPLOY.md](DEPLOY.md); every setting is in [.env.example](.env.example).
+Privacy and security design: [PRIVACY.md](PRIVACY.md).
 
-```bash
-dailytimes register --relay https://times.example.com --name "Kitchen" \
-  --timezone Pacific/Auckland --admin-token $DAILYTIMES_ADMIN_TOKEN
-```
+## Use it
 
-You get a device token plus three ways to send it a brief: `mcp_url`, `webhook_url` and
-`email_address`.
+1. **Sign up** on the website and fill in *Interests* (or write a sentence and press *Suggest
+   sources*). Choose full page or receipt.
+2. **Connect AI**: create your endpoint, add the MCP URL as a connector in Claude or ChatGPT
+   (or `claude mcp add --transport http dailytimes <url>`), and paste the generated prompt.
+   It's [SETUP_PROMPT.md](SETUP_PROMPT.md), pre-filled with your interests and paper size.
+3. **Printers**: get a pairing code, then on the machine next to the printer:
 
-### 3. Connect your assistant
+   ```bash
+   pipx install "dailytimes[escpos,mdns]"          # add [gpio] on a Pi with a motion sensor
+   dailytimes setup --server https://your-server --code ABCD-EFGH
+   dailytimes agent                                 # or: dailytimes service, to run at boot
+   ```
 
-Follow [SETUP_PROMPT.md](SETUP_PROMPT.md): add the `mcp_url` as a connector and paste the
-prompt. It creates a daily task that uses what the assistant knows about you (field of work,
-job search, subreddits, stocks, calendar, email) and calls `print_brief`.
+   `setup` finds printers (CUPS queues, Bonjour/IPP Everywhere, USB and serial receipt
+   printers), suggests a paper profile, prints a test page, and writes
+   `~/.config/dailytimes/agent.yaml`.
 
-### 4. Set up the printer machine
-
-On a Raspberry Pi, Mac or Linux box next to the printer:
-
-```bash
-pip install "dailytimes[escpos,mdns]"      # add [gpio] on a Pi with a sensor
-dailytimes printers                         # what's connected, and which profile to use
-dailytimes test-print --adapter escpos --profile thermal-80mm --opt connection=usb \
-  --opt vendor_id=0x04b8 --opt product_id=0x0e28
-cp deploy/agent.example.yaml ~/.config/dailytimes/agent.yaml   # edit relay, outputs, presence
-DAILYTIMES_TOKEN=dt_... dailytimes agent --config ~/.config/dailytimes/agent.yaml
-```
-
-Then install it as a service: `deploy/systemd/dailytimes-agent.service` (Linux/Pi) or
-`deploy/launchd/org.dailytimes.agent.plist` (macOS).
+Without the website (headless, one household): set `DAILYTIMES_ADMIN_TOKEN` and use
+`dailytimes register` to get a printer token and an endpoint directly.
 
 ## Printers
 
@@ -180,30 +154,36 @@ also accept plain text: `# Heading`, `## Headline`, `- bullet https://link`, `le
 
 | method | path | auth | |
 |---|---|---|---|
-| POST | `/v1/devices` | admin | register: `{name, timezone}` → token + URLs |
-| POST | `/mcp` | device | MCP streamable HTTP, tool `print_brief`; token via Bearer or `?token=` |
-| POST | `/v1/briefs` | device | webhook: JSON brief, or `text/plain` with optional `X-Brief-Title` |
+| POST | `/u/{token}/mcp` (also `/mcp` + Bearer or `?token=`) | endpoint token | MCP streamable HTTP, one tool: `print_brief` |
+| POST | `/u/{token}/brief` (also `/v1/briefs` + Bearer) | endpoint token | webhook: JSON brief, or `text/plain` with optional `X-Brief-Title` |
 | POST | `/v1/inbound/email` | `X-Inbound-Secret` | raw RFC 822 from your mail provider; recipient `brief+<token>@domain` |
-| GET | `/v1/device/brief` | device | today's pending brief, or 204 |
-| POST | `/v1/device/briefs/{id}/status` | device | `{status: printed\|failed, detail}` |
-| GET | `/v1/device`, `/v1/device/history` | device | device info, dedup history |
+| POST | `/v1/pair` | pairing code | `{code}` → printer token |
+| GET | `/v1/device/brief` | printer token | today's edition for this printer, or 204 (builds the auto edition if due) |
+| POST | `/v1/device/briefs/{id}/status` | printer token | `{status: printed\|failed, detail}` |
+| GET | `/v1/device`, `/v1/device/history` | printer token | printer info, seen-link history |
+| POST | `/v1/devices` | admin token | headless account + printer + endpoint |
+| GET | `/cron/daily` | `CRON_SECRET` | pre-build auto editions, apply retention |
+
+The **endpoint token** can only add editions; the **printer token** can only read today's
+edition and report its own status. Both are stored hashed.
 
 Send responses include `status` (`queued`, `duplicate`, `empty_after_dedup`),
-`dropped_duplicates` (links printed in the last 60 days) and `superseded`.
+`dropped_duplicates` (links already printed in the last 60 days) and `superseded`.
 
-## Layout
+## Code map
 
 ```
 src/dailytimes/
-  blocks.py            schema, validation, link canonicalisation, plain-text parser
-  relay/               FastAPI app, SQLite store, MCP server, inbound email transports
-  render/              profiles, fonts (bundled, OFL), layout engine, raster + PDF renderers
-  profiles/*.yaml      shipped printer profiles
+  blocks.py            brief schema, strict validation, link canonicalisation, plain-text parser
+  relay/               the server: app (API), web (website), store, db (SQLite | Supabase),
+                       mcp_server, sessions, mailer, autoedition, inbound email, templates/
+  autobrief/           interests, public sources, composer, source suggestion, SSRF-safe fetch
+  render/              profiles, bundled fonts (OFL), layout engine, raster + PDF renderers
   adapters/            cups+ipp, escpos, catprinter, email, file, discovery
-  agent/               config, rules, presence backends, runner
-  cli.py               dailytimes relay|register|send|render|profiles|printers|test-print|print|agent|presence
-scripts/demo.sh        end-to-end demo
-deploy/                agent example config, systemd unit, launchd plist
+  agent/               printer agent: config, rules, presence, runner, setup wizard
+  cli.py               dailytimes serve|register|send|setup|service|agent|presence|printers|test-print|render|...
+api/index.py           Vercel entry point          supabase/schema.sql   database schema (+ RLS)
+scripts/               demo.sh, test_postgrest.sh  deploy/               example agent config, unit files
 ```
 
 Decisions and progress are in [PROGRESS.md](PROGRESS.md).

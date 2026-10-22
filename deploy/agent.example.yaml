@@ -1,7 +1,8 @@
-# Device agent config. Copy to ~/.config/dailytimes/agent.yaml and edit.
+# Printer agent config. `dailytimes setup --server URL --code CODE` writes this for you;
+# this example shows every option. Lives at ~/.config/dailytimes/agent.yaml.
 relay:
   url: https://times.example.com
-  token_env: DAILYTIMES_TOKEN        # or `token: dt_...` (keep this file private)
+  token_env: DAILYTIMES_TOKEN        # or `token: dtd_...` (keep this file private)
 
 # timezone: Pacific/Auckland         # default: the device timezone set on the relay
 poll_interval_seconds: 300
