@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>{{ local_now.strftime("%A") }}'s edition</h1>
+{% if brief %}
+  <p class="muted">
+    {% if brief.source == "auto" %}Auto edition, built from your interests.{% else %}Sent by your AI ({{ brief.source }}).{% endif %}
+    {% if brief.title %}“{{ brief.title }}”.{% endif %}
+    {% if printed %}Printed on {% for name, r in printed %}{{ name }}{% if r.status != "printed" %} (failed: {{ r.detail }}){% endif %}{{ ", " if not loop.last }}{% endfor %}.
+    {% elif devices %}Not printed yet; it prints when someone walks up to a paired printer.
+    {% else %}No printer paired; download it below or <a href="/app/printers">pair one</a>.{% endif %}
+  </p>
+  <div class="row">
+    <a class="btn" href="/app/edition.pdf?profile={{ 'letter' if user.timezone.startswith('America/') else 'a4' }}">Open PDF</a>
+    <a class="btn ghost" href="/app/edition.pdf?profile=a4">A4</a>
+    <a class="btn ghost" href="/app/edition.pdf?profile=letter">Letter</a>
+    <a class="btn ghost" href="/app/edition.png?profile=receipt">80 mm receipt</a>
+    <a class="btn ghost" href="/app/edition.png?profile=receipt58">58 mm receipt</a>
+  </div>
+  <p></p>
+  {% if user.edition_size == "slip" %}
+    <img class="preview slip" src="/app/edition.png?profile=receipt" alt="Today's edition as a receipt">
+  {% else %}
+    <img class="preview" src="/app/edition.png?profile=a4&preview=1" alt="Today's edition">
+  {% endif %}
+{% else %}
+  {% if interests.is_empty() %}
+    <p class="lede">No edition yet. <a href="/app/interests">Tell us what you're into</a> and we'll build one every morning, or <a href="/app/connect">connect an AI</a> to send one.</p>
+  {% else %}
+    <p class="lede">No edition yet today.
+    {% if user.auto_enabled %}Your auto edition is built after {{ user.auto_after }} ({{ user.timezone }}), unless your AI sends one first.{% else %}Auto editions are off.{% endif %}</p>
+    <form method="post" action="/app/edition/build">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button>Build today's auto edition now</button>
+    </form>
+  {% endif %}
+{% endif %}
+
+<div class="cols">
+  <div>
+    <h2>Your AI</h2>
+    {% if has_endpoint %}<p>Your private endpoint is set up. Any agent that has it can send today's edition; the newest one wins.</p>
+    {% else %}<p>Not connected. The auto edition covers public news; an AI adds your calendar, inbox and judgement.</p>{% endif %}
+    <a href="/app/connect">Connect an AI</a>
+  </div>
+  <div>
+    <h2>Printers</h2>
+    {% if devices %}<ul>{% for d in devices %}<li>{{ d.name }} <span class="muted small">{% if d.last_seen_at %}seen {{ d.last_seen_at[:16].replace("T", " ") }} UTC{% else %}never connected{% endif %}</span></li>{% endfor %}</ul>
+    {% else %}<p>None yet. Without one, open the PDF and print it, or read it here.</p>{% endif %}
+    <a href="/app/printers">Manage printers</a>
+  </div>
+</div>
+{% endblock %}

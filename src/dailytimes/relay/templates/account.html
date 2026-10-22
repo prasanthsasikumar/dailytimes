@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Account</h1>
+<p>Signed in as <b>{{ user.email }}</b>. Timezone {{ user.timezone }}.</p>
+{% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+
+<h2>Your data</h2>
+<p>Everything we hold about you, as JSON: account, interests, printers (names only), editions from the last 30 days and the links you've already seen.</p>
+<a class="btn ghost" href="/app/account/export">Download my data</a>
+
+<h2>Sessions</h2>
+<form method="post" action="/app/account/signout-everywhere"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost">Sign out everywhere</button></form>
+
+<h2>Delete account</h2>
+<p>Deletes your account, interests, printers, editions and history right away. Paired printers and your AI endpoint stop working. This can't be undone.</p>
+<form method="post" action="/app/account/delete">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label for="confirm">Type your email to confirm</label>
+  <div class="row" style="margin-top:0"><input id="confirm" type="text" name="confirm" autocomplete="off" style="flex:1;min-width:220px"><button class="danger">Delete everything</button></div>
+</form>
+{% endblock %}

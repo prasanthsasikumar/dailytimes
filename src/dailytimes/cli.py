@@ -32,12 +32,18 @@ def _load_brief(path: str):
 
 # ---------------------------------------------------------------- commands
 
-def cmd_relay(a):
+def cmd_serve(a):
+    import os
+
     import uvicorn
 
     from .relay.app import create_app
 
-    uvicorn.run(create_app(db_path=a.db, public_url=a.public_url), host=a.host, port=a.port, log_level=a.log_level)
+    if a.db:
+        os.environ["DAILYTIMES_DB"] = a.db
+    if a.public_url:
+        os.environ["DAILYTIMES_PUBLIC_URL"] = a.public_url
+    uvicorn.run(create_app(), host=a.host, port=a.port, log_level=a.log_level)
 
 
 def cmd_register(a):
@@ -52,14 +58,32 @@ def cmd_register(a):
 
 
 def cmd_send(a):
-    from .client import send_mcp, send_webhook
+    from .client import send
 
-    brief = _load_brief(a.file)
-    if a.via == "mcp":
-        result = send_mcp(a.relay, a.token, brief)
-    else:
-        result = send_webhook(a.relay, a.token, brief)
-    print(json.dumps(result, indent=2))
+    print(json.dumps(send(a.endpoint, _load_brief(a.file)), indent=2))
+
+
+def cmd_setup(a):
+    from pathlib import Path
+
+    from .agent.setup import SetupError, run_setup
+
+    try:
+        run_setup(a.server, a.code, config_path=Path(a.config).expanduser(), yes=a.yes, profile=a.profile,
+                  adapter=a.adapter, options=_opts(a.opt), presence=a.presence, gpio_pin=a.gpio_pin,
+                  test_print=not a.no_test_print, print_after=a.print_after)
+    except SetupError as e:
+        raise SystemExit(str(e))
+
+
+def cmd_service(a):
+    from pathlib import Path
+
+    from .agent.setup import service_file
+
+    dest, body, cmds = service_file(Path(a.config).expanduser())
+    print(f"# Save as {dest}, then run:\n#   {cmds}\n")
+    print(body)
 
 
 def cmd_render(a):
@@ -140,7 +164,12 @@ def cmd_agent(a):
     from .agent.config import load_config
     from .agent.runner import run_agent
 
-    cfg = load_config(a.config)
+    from pathlib import Path
+
+    path = Path(a.config).expanduser()
+    if not path.exists():
+        raise SystemExit(f"no agent config at {path}; run `dailytimes setup --server <url> --code <code>` first")
+    cfg = load_config(path)
     if a.dry_run:
         for out in cfg.outputs:
             out.dry_run = True
@@ -160,27 +189,44 @@ def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="dailytimes", description="The Daily Times: your assistant's brief, on paper.")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    p = sub.add_parser("relay", help="run the relay server")
-    p.add_argument("--host", default="0.0.0.0")
-    p.add_argument("--port", type=int, default=8787)
-    p.add_argument("--db", default=None, help="SQLite path (default $DAILYTIMES_DB or ./dailytimes.db)")
-    p.add_argument("--public-url", default=None)
-    p.add_argument("--log-level", default="info")
-    p.set_defaults(fn=cmd_relay)
+    for name in ("serve", "relay"):
+        p = sub.add_parser(name, help="run the server: website, relay API, MCP" + (" (alias of serve)" if name == "relay" else ""))
+        p.add_argument("--host", default="0.0.0.0")
+        p.add_argument("--port", type=int, default=8787)
+        p.add_argument("--db", default=None, help="SQLite path (default $DAILYTIMES_DB or ./dailytimes.db)")
+        p.add_argument("--public-url", default=None)
+        p.add_argument("--log-level", default="info")
+        p.set_defaults(fn=cmd_serve)
 
-    p = sub.add_parser("register", help="create a device account on a relay")
+    p = sub.add_parser("register", help="admin: create an account + printer without the website")
     p.add_argument("--relay", required=True)
     p.add_argument("--name", required=True)
     p.add_argument("--timezone", default="UTC")
     p.add_argument("--admin-token", default=None)
     p.set_defaults(fn=cmd_register)
 
-    p = sub.add_parser("send", help="send a brief (JSON or markdown-ish text) to a relay")
+    p = sub.add_parser("send", help="send a brief (JSON or markdown-ish text) to your endpoint")
     p.add_argument("file", help="brief file, or - for stdin")
-    p.add_argument("--relay", required=True)
-    p.add_argument("--token", required=True)
-    p.add_argument("--via", choices=["webhook", "mcp"], default="webhook")
+    p.add_argument("--endpoint", required=True, help="your MCP URL (…/mcp) or webhook URL (…/brief)")
     p.set_defaults(fn=cmd_send)
+
+    p = sub.add_parser("setup", help="pair this machine with your account and choose a printer")
+    p.add_argument("--server", required=True, help="e.g. https://times.example.com")
+    p.add_argument("--code", required=True, help="pairing code from the Printers page")
+    p.add_argument("--config", default="~/.config/dailytimes/agent.yaml")
+    p.add_argument("--yes", action="store_true", help="don't ask; use flags and suggestions")
+    p.add_argument("--profile")
+    p.add_argument("--adapter")
+    p.add_argument("--opt", action="append", metavar="KEY=VALUE")
+    p.add_argument("--presence", choices=["manual", "gpio"], default="manual")
+    p.add_argument("--gpio-pin", type=int)
+    p.add_argument("--print-after", default="06:30")
+    p.add_argument("--no-test-print", action="store_true")
+    p.set_defaults(fn=cmd_setup)
+
+    p = sub.add_parser("service", help="print a systemd unit / launchd plist to run the agent at boot")
+    p.add_argument("--config", default="~/.config/dailytimes/agent.yaml")
+    p.set_defaults(fn=cmd_service)
 
     p = sub.add_parser("render", help="render a brief to PDF/PNG without printing")
     p.add_argument("file")
@@ -210,7 +256,7 @@ def build_parser() -> argparse.ArgumentParser:
         p.set_defaults(fn=fn)
 
     p = sub.add_parser("agent", help="run the device agent next to the printer")
-    p.add_argument("--config", default="agent.yaml")
+    p.add_argument("--config", default="~/.config/dailytimes/agent.yaml")
     p.add_argument("--once", action="store_true", help="poll, handle one presence check, exit")
     p.add_argument("--dry-run", action="store_true")
     p.set_defaults(fn=cmd_agent)

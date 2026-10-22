@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Connect your AI</h1>
+<p class="lede">Your AI writes a personal edition from what it can see (your calendar, inbox, chats) and sends us only the finished page. One private endpoint works for every agent you use.</p>
+
+{% if new %}
+<div class="box">
+  <p><b>Here's your endpoint. Copy it now:</b> we store only a fingerprint of it, so we can't show it again. Anyone with it can send you an edition, so treat it like a password.</p>
+  <label>MCP connector URL <span class="hint">Claude, ChatGPT, Codex, Claude Code</span></label>
+  <div class="copy"><input type="text" readonly value="{{ new.mcp_url }}" onclick="this.select()"></div>
+  <label>Webhook URL <span class="hint">POST JSON or plain text from scripts, n8n, Zapier, any agent with a shell</span></label>
+  <div class="copy"><input type="text" readonly value="{{ new.webhook_url }}" onclick="this.select()"></div>
+  <label>Email address <span class="hint">for assistants that can only send mail, if this server receives mail</span></label>
+  <div class="copy"><input type="text" readonly value="{{ new.email_address }}" onclick="this.select()"></div>
+</div>
+{% elif has_endpoint %}
+<p class="notice">You have an endpoint. Lost it? Make a new one: the old one stops working immediately.</p>
+{% endif %}
+<form method="post" action="/app/connect">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button>{{ "Make a new endpoint" if has_endpoint or new else "Create my endpoint" }}</button>
+</form>
+
+<h2>Add it to your assistant</h2>
+<div class="cols">
+  <div>
+    <h3>Claude</h3>
+    <p>Settings → Connectors → <i>Add custom connector</i>. Paste the MCP URL. Turn it on in a chat, along with your calendar and Gmail connectors.</p>
+    <h3>ChatGPT</h3>
+    <p>Settings → Apps &amp; Connectors → developer mode → <i>Create</i>. Paste the MCP URL, no authentication.</p>
+  </div>
+  <div>
+    <h3>Claude Code, Codex, agents</h3>
+    <pre>claude mcp add --transport http dailytimes "&lt;MCP URL&gt;"</pre>
+    <p>or <code>[mcp_servers.dailytimes] url = "&lt;MCP URL&gt;"</code> in <code>~/.codex/config.toml</code>, or POST to the webhook:</p>
+    <pre>curl -X POST "&lt;webhook URL&gt;" -H "Content-Type: text/plain" --data-binary @brief.md</pre>
+  </div>
+</div>
+
+<h2>Then paste this prompt</h2>
+<p>It sets up a daily task. It already includes your paper size and interests; edit anything.</p>
+<pre id="prompt">{{ prompt }}</pre>
+<button class="ghost" onclick="navigator.clipboard.writeText(document.getElementById('prompt').innerText); this.textContent='Copied'">Copy prompt</button>
+{% if welcome %}<p><a href="/app/printers">Next: pair a printer</a> or <a href="/app">skip to today's edition</a></p>{% endif %}
+{% endblock %}

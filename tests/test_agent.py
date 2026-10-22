@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from dailytimes.agent.config import AgentConfig, load_config
 from dailytimes.agent.runner import Agent, RelayClient
 from dailytimes.relay.app import create_app
+from dailytimes.relay.settings import Settings
 
 UTC = dt.timezone.utc
 
@@ -23,10 +24,11 @@ class Clock:
 
 @pytest.fixture
 def relay():
-    app = create_app(":memory:", admin_token="")
+    app = create_app(":memory:", Settings.from_env(public_url="http://testserver", secret="x" * 64))
     with TestClient(app) as c:
-        token = c.post("/v1/devices", json={"name": "hall", "timezone": "UTC"}).json()["token"]
-        c.headers_for = {"Authorization": f"Bearer {token}"}
+        _, _, token, send = app.state.store.register_device_account("hall", "UTC")
+        c.headers_for = {"Authorization": f"Bearer {send}"}  # AI agent sending briefs
+        c.device_headers = {"Authorization": f"Bearer {token}"}
         c.token = token
         yield c
 
@@ -65,7 +67,7 @@ def test_end_to_end_print_once_and_report(relay, tmp_path, sample_dict):
     assert files == [f"daily-times-{day}-a4.pdf", f"daily-times-{day}-thermal-58mm.png"]
 
     # relay knows, and the agent won't print again today
-    assert relay.get(f"/v1/device/briefs/{bid}", headers=relay.headers_for).json()["status"] == "printed"
+    assert relay.get(f"/v1/device/briefs/{bid}", headers=relay.device_headers).json()["status"] == "printed"
     clock.t += dt.timedelta(hours=2)
     assert agent.handle_presence("t")["reason"] == "already printed today"
 
@@ -88,8 +90,9 @@ def test_failed_output_reports_failed_and_retries_after_cooldown(relay, tmp_path
     bid = send(relay, sample_dict)
     res = agent.handle_presence("t")
     assert res["printed"] is False and "host" in res["outputs"][0]["detail"]
-    b = relay.get(f"/v1/device/briefs/{bid}", headers=relay.headers_for).json()
-    assert b["status"] == "pending" and b["attempts"] == 1
+    b = relay.get(f"/v1/device/briefs/{bid}", headers=relay.device_headers).json()
+    assert b["status"] == "failed" and b["attempts"] == 1
+    assert relay.get("/v1/device/brief", headers=relay.device_headers).json()["id"] == bid  # still printable
     assert agent.handle_presence("t")["reason"].startswith("cooldown")
 
 

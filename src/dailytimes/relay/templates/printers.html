@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Printers</h1>
+<p class="lede">Any printer works: a receipt printer, a laser or inkjet, an email-to-print address. A small agent on a Raspberry Pi, Mac or Linux box next to it prints today's edition when someone walks up.</p>
+
+{% if code %}
+<div class="box">
+  <p><b>Pairing code for “{{ name }}”: <span class="code" style="font-size:22px">{{ code }}</span></b> (valid 15 minutes, works once)</p>
+  <p>On the computer next to the printer:</p>
+<pre>pipx install "dailytimes[escpos,mdns]"     # or: pip install ...
+dailytimes setup --server {{ settings.public_url }} --code {{ code }}</pre>
+  <p class="small muted">Setup finds your printers, suggests the right paper profile, prints a test page and writes the config. Then run <code>dailytimes agent</code>, or install it as a service (instructions are printed at the end).</p>
+</div>
+{% endif %}
+
+<form method="post" action="/app/printers" class="box">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label for="name">Add a printer <span class="hint">A name you'll recognise</span></label>
+  <div class="row" style="margin-top:0"><input id="name" type="text" name="name" value="Kitchen printer" style="flex:1;min-width:200px"><button>Get pairing code</button></div>
+</form>
+
+<h2>Paired</h2>
+{% if devices %}
+<table>
+  <tr><th>Name</th><th>Paired</th><th>Last seen (UTC)</th><th></th></tr>
+  {% for d in devices %}
+  <tr><td>{{ d.name }}</td><td>{{ d.created_at[:10] }}</td><td>{{ d.last_seen_at[:16].replace("T", " ") if d.last_seen_at else "never" }}</td>
+    <td><form method="post" action="/app/printers/{{ d.id }}/delete" onsubmit="return confirm('Unpair {{ d.name }}? Its agent stops working.')"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="link">Unpair</button></form></td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="muted">No printers yet.</p>{% endif %}
+
+<h2>No printer?</h2>
+<p>Open today's PDF from the <a href="/app">front page</a> and print it, or just read it there.</p>
+{% endblock %}

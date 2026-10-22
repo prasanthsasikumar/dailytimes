@@ -212,6 +212,8 @@ def short_link(url: str, limit: int = 40) -> str:
     """Human-typeable short form of a link for printing next to an item."""
     p = urlsplit(url)
     host = (p.hostname or "").lower().removeprefix("www.")
+    if host == "news.google.com" and p.path.startswith(("/rss/articles/", "/articles/")):
+        return "via Google News"  # opaque redirect id; the publisher is named in the headline
     path = p.path.rstrip("/")
     text = host + path
     if len(text) <= limit:

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Check your inbox</h1>
+<p class="lede">If {{ email }} is right, a sign-in link is on its way. It works once and expires in 15 minutes.</p>
+{% if note %}<p class="notice">{{ note }}</p>{% endif %}
+{% if dev_link %}
+<div class="notice"><b>Development mode:</b> mail isn't configured on this server, so here's the link:<br><a href="{{ dev_link }}">{{ dev_link }}</a></div>
+{% endif %}
+<p><a href="/">Use a different email</a></p>
+{% endblock %}

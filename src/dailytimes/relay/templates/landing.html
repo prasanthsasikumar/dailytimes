@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>A one-page newspaper about your day, printed when you walk up to your printer.</h1>
+<p class="lede">Tell us what you're into and get a fresh front page every morning from public sources. Connect Claude, ChatGPT or any AI agent and it writes you a personal edition with your calendar and inbox. It prints on any printer you own: receipt, laser, inkjet, or none at all.</p>
+
+<div class="box">
+  <form method="post" action="/login">
+    <label for="email">Start with your email <span class="hint">We send a one-time sign-in link. No password.</span></label>
+    <div class="row" style="margin-top:0">
+      <input id="email" type="email" name="email" required autocomplete="email" value="{{ email or '' }}" style="flex:1;min-width:220px">
+      <button>Send link</button>
+    </div>
+    {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+  </form>
+</div>
+
+<div class="cols">
+  <div>
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li><b>Say what you're into.</b> A sentence is enough; we suggest sources and you edit them.</li>
+      <li><b>Get an auto edition every morning</b> with headlines, papers, posts, prices and weather, exactly as published.</li>
+      <li><b>Optional: connect your AI.</b> You get a private endpoint; any agent can send you a richer edition.</li>
+      <li><b>Optional: pair a printer.</b> A small agent next to it prints when someone walks up.</li>
+    </ol>
+  </div>
+  <div>
+    <h2>Privacy, plainly</h2>
+    <ul>
+      <li>We store your email, your interests and the last 30 days of editions. That's it.</li>
+      <li>We never see your calendar or mail. Your AI reads those and sends us only the finished page.</li>
+      <li>No ads, no trackers, no analytics.</li>
+      <li>Export or delete everything from your account page, any time.</li>
+      <li>Open source: run your own copy if you'd rather.</li>
+    </ul>
+    <p><a href="/privacy">Full privacy notice</a></p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+Please set up a recurring task called "The Daily Times" that runs every day at 06:00 in my
+timezone ({{ timezone }}). Run it once right now as a test, then keep the schedule.
+
+My printer: {{ size }}.
+
+Each run, act as the editor of my personal one-page morning paper. Use what you know about
+me (memory, past conversations, connected apps) to decide what matters to me:
+{{ interests }}
+
+Gather: today's calendar (time, title, place); emails from the last 24 hours that need me to
+act (sender, ask, deadline); two to six concrete developments in my field from the last day;
+new posts, papers, jobs or prices I follow; the week ahead; deadlines.
+
+Editorial rules:
+- Concrete facts only: names, numbers, dates, times, places. No filler or greetings.
+- Never invent anything. If you couldn't verify it today, leave it out; drop empty sections.
+- Every news, job or community item gets exactly one source link (its `url`).
+- One sentence per item where possible. Fill the length with more items, not longer ones.
+- Plain text, no markdown, no emoji.
+
+Then call the `print_brief` tool once: `title` is a short edition line ("Thursday
+briefing"); `blocks` use heading (sections), row (calendar, prices, deadlines), bullet with
+url (news, jobs, posts), text for the one or two items that need a sentence of context, at
+most one qr for the link most worth opening on my phone, and a final small block naming the
+sources you used. If it returns a validation error, fix exactly that and call it once more.
+Reply to me with one line: how many items were queued.

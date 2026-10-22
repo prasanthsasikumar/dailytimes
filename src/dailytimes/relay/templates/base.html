@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>{% block title %}The Daily Times{% endblock %}</title>
+<style>
+@font-face { font-family: "Masthead"; src: url("/static/fonts/UnifrakturMaguntia-Book.ttf"); font-display: swap; }
+@font-face { font-family: "PT Serif"; src: url("/static/fonts/PT_Serif-Web-Regular.ttf"); font-display: swap; }
+@font-face { font-family: "PT Serif"; font-weight: 700; src: url("/static/fonts/PT_Serif-Web-Bold.ttf"); font-display: swap; }
+@font-face { font-family: "PT Serif"; font-style: italic; src: url("/static/fonts/PT_Serif-Web-Italic.ttf"); font-display: swap; }
+@font-face { font-family: "PT Sans"; src: url("/static/fonts/PT_Sans-Web-Regular.ttf"); font-display: swap; }
+@font-face { font-family: "PT Sans"; font-weight: 700; src: url("/static/fonts/PT_Sans-Web-Bold.ttf"); font-display: swap; }
+:root { --paper: #fbfaf6; --ink: #161514; --muted: #5d5a55; --rule: #1d1c1a; --soft: #e7e3da; --accent: #8b1a1a; --field: #fff; }
+@media (prefers-color-scheme: dark) { :root { --paper: #151412; --ink: #ece8e0; --muted: #a39e94; --rule: #d9d4ca; --soft: #2c2a26; --accent: #e07a6c; --field: #1d1b18; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.55 "PT Serif", Georgia, serif; }
+.wrap { max-width: 860px; margin: 0 auto; padding: 0 16px 64px; }
+header.mast { text-align: center; padding: 22px 0 0; }
+header.mast a.name { font: 52px/1 "Masthead", serif; color: var(--ink); text-decoration: none; }
+.bar { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-top: 3px double var(--rule); border-bottom: 1px solid var(--rule); margin-top: 10px; padding: 4px 0; font: 700 12px/1.6 "PT Sans", sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+.bar nav a { color: var(--ink); text-decoration: none; margin-right: 14px; }
+.bar nav a.on { border-bottom: 2px solid var(--ink); }
+.bar form { display: inline; }
+h1, h2, h3 { font-weight: 700; line-height: 1.2; }
+h1 { font-size: 32px; margin: 28px 0 8px; }
+h2 { font: 700 13px/1.4 "PT Sans", sans-serif; letter-spacing: .14em; text-transform: uppercase; border-top: 2px solid var(--rule); padding-top: 8px; margin: 34px 0 12px; }
+p.lede { font-size: 20px; color: var(--muted); }
+a { color: var(--ink); }
+.muted { color: var(--muted); }
+small, .small { font-size: 14px; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+@media (max-width: 680px) { .cols { grid-template-columns: 1fr; } header.mast a.name { font-size: 38px; } }
+label { display: block; font: 700 13px/1.4 "PT Sans", sans-serif; letter-spacing: .06em; text-transform: uppercase; margin: 16px 0 6px; }
+label .hint { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); }
+input[type=text], input[type=email], input[type=time], textarea, select { width: 100%; font: 16px/1.4 "PT Serif", serif; padding: 9px 10px; border: 1px solid var(--rule); background: var(--field); color: var(--ink); border-radius: 0; }
+textarea { min-height: 90px; resize: vertical; }
+.check { display: flex; gap: 8px; align-items: center; font: 15px "PT Serif", serif; text-transform: none; letter-spacing: 0; }
+button, .btn { display: inline-block; font: 700 14px/1 "PT Sans", sans-serif; letter-spacing: .08em; text-transform: uppercase; padding: 12px 18px; border: 2px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; text-decoration: none; }
+button.ghost, .btn.ghost { background: transparent; color: var(--ink); }
+button.link { background: none; border: 0; padding: 0; color: var(--ink); text-decoration: underline; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
+button.danger { background: var(--accent); border-color: var(--accent); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+.box { border: 1px solid var(--rule); padding: 16px 18px; margin: 16px 0; background: var(--field); }
+.notice { border-left: 4px solid var(--ink); padding: 10px 14px; background: var(--soft); margin: 16px 0; }
+.error { border-left-color: var(--accent); }
+code, .code { font: 14px/1.45 ui-monospace, "SF Mono", Menlo, monospace; background: var(--soft); padding: 2px 5px; word-break: break-all; }
+pre { font: 13px/1.5 ui-monospace, "SF Mono", Menlo, monospace; background: var(--soft); padding: 12px; overflow-x: auto; white-space: pre-wrap; }
+.copy { display: flex; gap: 8px; } .copy input { font: 14px ui-monospace, Menlo, monospace; }
+.preview { width: 100%; border: 1px solid var(--soft); box-shadow: 0 2px 14px rgba(0,0,0,.12); background: #fff; }
+.slip { max-width: 300px; }
+table { width: 100%; border-collapse: collapse; } td, th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--soft); font-size: 15px; }
+.steps { counter-reset: s; list-style: none; padding: 0; } .steps li { counter-increment: s; margin: 0 0 14px 44px; position: relative; }
+.steps li::before { content: counter(s); position: absolute; left: -44px; top: -2px; font: 700 22px "PT Serif", serif; border: 2px solid var(--ink); width: 32px; height: 32px; text-align: center; line-height: 28px; }
+footer { border-top: 1px solid var(--rule); margin-top: 48px; padding-top: 10px; font: 13px "PT Sans", sans-serif; color: var(--muted); display: flex; gap: 16px; flex-wrap: wrap; }
+footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="mast">
+  <a class="name" href="{{ '/app' if user else '/' }}">The Daily Times</a>
+  <div class="bar">
+    {% if user %}
+    <nav>
+      <a href="/app" class="{{ 'on' if path == '/app' }}">Today</a>
+      <a href="/app/interests" class="{{ 'on' if path.startswith('/app/interests') }}">Interests</a>
+      <a href="/app/connect" class="{{ 'on' if path.startswith('/app/connect') }}">Connect AI</a>
+      <a href="/app/printers" class="{{ 'on' if path.startswith('/app/printers') }}">Printers</a>
+      <a href="/app/account" class="{{ 'on' if path.startswith('/app/account') }}">Account</a>
+    </nav>
+    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="link">Sign out</button></form>
+    {% else %}
+    <span>Your morning, in print</span><span><a href="/privacy">Privacy</a></span>
+    {% endif %}
+  </div>
+</header>
+{% block body %}{% endblock %}
+<footer>
+  <span>The Daily Times is open source.</span>
+  <a href="/privacy">Privacy</a>
+  {% if settings.contact %}<a href="mailto:{{ settings.contact }}">Contact</a>{% endif %}
+  <span>Run by {{ settings.operator }}.</span>
+</footer>
+</div>
+</body>
+</html>

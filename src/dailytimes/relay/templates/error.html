@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Something's off</h1>
+<p class="lede">{{ message }}</p>
+<p><a href="{{ '/app' if user else '/' }}">Back</a></p>
+{% endblock %}

@@ -7,3 +7,4 @@ out/
 *.db
 *.sqlite3
 .env
+.cache/

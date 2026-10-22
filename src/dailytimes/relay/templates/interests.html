@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>{{ "Welcome. What are you into?" if welcome else "Your interests" }}</h1>
+<p class="lede">These drive your auto edition: the front page we build from public sources when no AI has sent you one.</p>
+{% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+{% if suggested %}<p class="notice">We filled in the fields below from your description{% if suggested == "llm" %} using Claude{% else %} by keyword matching{% endif %}. Check them, then save.</p>{% endif %}
+
+<form method="post" action="/app/interests/suggest">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="welcome" value="{{ welcome }}">
+  <label for="about">In your own words <span class="hint">Your work, hobbies, what you follow, where you live.</span></label>
+  <textarea id="about" name="about" placeholder="I'm a UX researcher in Auckland. I follow AI, climate tech and the All Blacks, read r/userexperience, and hold $AAPL.">{{ i.about }}</textarea>
+  <div class="row"><button class="ghost">Suggest sources</button>
+  <span class="muted small">{% if settings.llm_enabled %}This server uses Claude to read your description; the text goes to Anthropic for that one request.{% else %}Matched on this server by keywords; the text goes nowhere else.{% endif %}</span></div>
+</form>
+
+<form method="post" action="/app/interests">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="welcome" value="{{ welcome }}">
+  <input type="hidden" name="about" value="{{ i.about }}">
+  <h2>Sources</h2>
+  <div class="cols">
+    <div>
+      <label for="topics">News topics <span class="hint">One per line, up to 8. Searched in Google News each morning.</span></label>
+      <textarea id="topics" name="topics">{{ i.topics | join("\n") }}</textarea>
+      <label for="subreddits">Subreddits <span class="hint">Top posts of the day.</span></label>
+      <textarea id="subreddits" name="subreddits">{{ i.subreddits | join("\n") }}</textarea>
+      <label class="check"><input type="checkbox" name="hacker_news" {{ "checked" if i.hacker_news }}> Hacker News front page</label>
+    </div>
+    <div>
+      <label for="tickers">Stocks and indices <span class="hint">Yahoo Finance symbols: AAPL, ^GSPC, AIR.NZ</span></label>
+      <textarea id="tickers" name="tickers">{{ i.tickers | join("\n") }}</textarea>
+      <label for="arxiv">arXiv categories <span class="hint">New papers, e.g. cs.HC, cs.LG</span></label>
+      <input id="arxiv" type="text" name="arxiv" value="{{ i.arxiv | join(', ') }}">
+      <label for="feeds">RSS feeds <span class="hint">Any blog or site feed URL, one per line</span></label>
+      <textarea id="feeds" name="feeds">{{ i.feeds | join("\n") }}</textarea>
+    </div>
+  </div>
+
+  <h2>Place and time</h2>
+  <div class="cols">
+    <div>
+      <label for="city">City for weather <span class="hint">Only the city is stored.</span></label>
+      <input id="city" type="text" name="city" value="{{ i.location.name if i.location else '' }}">
+      <label for="region">News edition (country code)</label>
+      <input id="region" type="text" name="region" value="{{ i.region }}" maxlength="2">
+    </div>
+    <div>
+      <label for="timezone">Timezone</label>
+      <input id="timezone" type="text" name="timezone" list="tzs" value="{{ user.timezone }}">
+      <datalist id="tzs">{% for tz in timezones %}<option value="{{ tz }}">{% endfor %}</datalist>
+      <label for="auto_after">Build the auto edition after <span class="hint">If your AI usually runs at 6:00, set 6:30.</span></label>
+      <input id="auto_after" type="time" name="auto_after" value="{{ user.auto_after }}">
+      <label class="check"><input type="checkbox" name="auto_enabled" {{ "checked" if user.auto_enabled }}> Build an auto edition when no AI sends one</label>
+    </div>
+  </div>
+
+  <h2>Paper</h2>
+  <label class="check"><input type="radio" name="edition_size" value="page" {{ "checked" if user.edition_size == "page" }}> Full page (A4 or Letter): around 35 items</label>
+  <label class="check"><input type="radio" name="edition_size" value="slip" {{ "checked" if user.edition_size == "slip" }}> Receipt slip: around 12 items</label>
+  <div class="row"><button>Save</button></div>
+</form>
+{% endblock %}

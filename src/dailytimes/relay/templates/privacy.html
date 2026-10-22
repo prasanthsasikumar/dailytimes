@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Privacy</h1>
+<p class="lede">The Daily Times is built to know as little about you as it can and still print your paper.</p>
+
+<h2>What we store</h2>
+<ul>
+  <li><b>Your email address</b>, to send sign-in links. No password.</li>
+  <li><b>Your interests</b> as you entered them: topics, subreddits, tickers, feeds, arXiv categories, a city for weather, your timezone, and the description you typed.</li>
+  <li><b>Editions</b> (the finished pages) for 30 days, then deleted.</li>
+  <li><b>Links you've already seen</b>, as normalised URLs, for 60 days, so stories don't repeat.</li>
+  <li><b>Printers</b>: a name, when it was paired and last connected.</li>
+  <li><b>Tokens</b> for your AI endpoint and printers, stored only as one-way hashes.</li>
+</ul>
+
+<h2>What we never see</h2>
+<p>Your calendar, mail, chats and files. If you connect an AI, it reads those on its side and sends us only the finished page.</p>
+
+<h2>Who else is involved</h2>
+<ul>
+  <li><b>Public sources</b>: to build your auto edition, this server requests Google News searches for your topics, Hacker News, Reddit, arXiv, Yahoo Finance for your tickers, Open-Meteo for your city, and the feeds you add. These requests come from the server, not from you, and carry no account or personal information beyond the search terms themselves.</li>
+  {% if settings.llm_enabled %}<li><b>Anthropic</b>: if you press "Suggest sources", your description is sent to Claude once to propose sources. It isn't used otherwise.</li>{% else %}<li>Source suggestions run on this server by keyword matching; your description isn't sent anywhere.</li>{% endif %}
+  <li><b>Email delivery</b>: sign-in links go through this server's mail provider.</li>
+  <li><b>Hosting and database</b>: the operator's providers process data on our behalf.</li>
+</ul>
+
+<h2>What we don't do</h2>
+<p>No ads, no analytics, no tracking pixels, no third-party scripts, no selling or sharing data. One cookie, to keep you signed in.</p>
+
+<h2>Your controls</h2>
+<p>Download everything or delete your account on the Account page. Deletion is immediate.</p>
+
+<h2>Run your own</h2>
+<p>The Daily Times is open source. You can run the whole thing on your own computer or server, with your data in a local file.</p>
+<p class="muted small">Operated by {{ settings.operator }}{% if settings.contact %}, contact {{ settings.contact }}{% endif %}.</p>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Sign in to The Daily Times</h1>
+<form method="post" action="/auth/verify">
+  <input type="hidden" name="token" value="{{ token }}">
+  <input type="hidden" name="tz" id="tz" value="UTC">
+  <p class="lede">One click and you're in.</p>
+  <button>Sign in</button>
+</form>
+<script>try { document.getElementById("tz").value = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch (e) {}</script>
+{% endblock %}

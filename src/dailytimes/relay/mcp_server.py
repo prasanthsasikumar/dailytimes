@@ -1,7 +1,11 @@
 """MCP server (streamable HTTP) exposing one tool: `print_brief`.
 
-Auth: the device token, as `Authorization: Bearer <token>` or `?token=<token>`
-on the MCP URL (for connector UIs that only take a URL).
+Auth: the user's write-only send token, in the URL path (`/u/<token>/mcp`, the
+"unique endpoint" shown on the dashboard), as `Authorization: Bearer <token>`, or
+as `?token=<token>`.
+
+Serverless-safe: `mcp_asgi` builds a fresh stateless server per request, so it
+never depends on ASGI lifespan events (which some hosts don't run).
 """
 
 from __future__ import annotations
@@ -13,6 +17,8 @@ from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import ValidationError
 
 from ..blocks import MAX_BLOCKS, MAX_TOTAL_CHARS, Block, Brief
+from starlette.types import Receive, Scope, Send
+
 from .store import Store, StoreError
 
 TOOL_DESCRIPTION = f"""\
@@ -62,20 +68,42 @@ def build_mcp(store: Store) -> MCPServer:
         title: str | None = None,
         date: dt.date | None = None,
     ) -> dict:
-        device = store.device_for_token(_token_from(ctx))
-        if device is None:
-            raise ToolError("unauthorized: missing or unknown device token")
+        user = store.user_for_send_token(_token_from(ctx))
+        if user is None:
+            raise ToolError("unauthorized: missing or unknown Daily Times endpoint token")
         try:
             brief = Brief(blocks=blocks, title=title, date=date)
         except ValidationError as e:
             raise ToolError(_friendly(e)) from None
         try:
-            result = store.enqueue(device, brief, source="mcp")
+            result = store.enqueue(user, brief, source="mcp")
         except StoreError as e:
             raise ToolError(str(e)) from None
         return result.as_dict()
 
     return mcp
+
+
+class mcp_asgi:
+    """ASGI endpoint for /mcp and /u/{token}/mcp. A class (not a function) so Starlette
+    routes treat it as a raw ASGI app."""
+
+    def __init__(self, store: Store):
+        self.store = store
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        token = (scope.get("path_params") or {}).get("token")
+        scope = dict(scope)
+        if token:  # path token -> Authorization header, so the tool has one place to look
+            headers = [(k, v) for k, v in scope["headers"] if k.lower() != b"authorization"]
+            scope["headers"] = headers + [(b"authorization", f"Bearer {token}".encode())]
+        scope["path"] = "/mcp"
+        scope["raw_path"] = b"/mcp"
+        server = build_mcp(self.store)
+        inner = server.streamable_http_app(stateless_http=True, json_response=True, streamable_http_path="/mcp",
+                                           host="0.0.0.0")
+        async with server.session_manager.run():
+            await inner(scope, receive, send)
 
 
 def _token_from(ctx: Context) -> str | None:
