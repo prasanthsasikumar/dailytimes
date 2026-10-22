@@ -5,7 +5,7 @@
 - [x] M2 Rendering: one layout engine, raster + PDF renderers, nameplate, YAML profiles
 - [x] M3 Output adapters (CUPS/IPP, ESC/POS, cat printer stub, email-to-print, file) + `printers` / `test-print` CLI
 - [x] M4 Device agent: polling, presence backends, print rules, status reporting
-- [ ] M5 SETUP_PROMPT.md, deploy files (docker-compose, systemd, launchd), README, demo.sh
+- [x] M5 SETUP_PROMPT.md, deploy files (docker-compose, systemd, launchd), README, demo.sh
 
 ## Decisions (ambiguities resolved with the simplest reasonable option)
 - **One token per device.** The same token is used by the assistant (MCP/webhook/email) and the device agent. Simpler to set up; a leaked token can at worst queue or mark briefs.
@@ -35,3 +35,15 @@
 - **Agent timezone** defaults to the device timezone stored on the relay, so "today" means the same thing on both sides.
 - **Relay outage**: the agent polls every `poll_interval_seconds` and caches today's brief, so it can still print from cache when the relay is unreachable at presence time.
 - **Presence**: `manual` = local HTTP `POST /presence` (also used by `dailytimes presence`, phone shortcuts) plus optional GPIO push button; `gpio` = gpiozero `DigitalInputDevice` (PIR/mmWave OUT pin) with debounce and optional hold time; `simulated` = stdin/timer/code; `ble` = stub with bleak scanning and RSSI threshold (needs a stable advertiser, since phones randomise addresses).
+- **Demo** picks free ports (8787 was taken on the dev machine) and binds to 127.0.0.1; it registers the device in the machine's timezone so the masthead shows your local date. The agent writes all four outputs from one presence event (four `file` outputs), which exercises the real relay → agent → render → adapter path rather than rendering separately.
+- **Docker** packages only the relay (`.[relay]`), runs as non-root with SQLite on a volume, and publishes 8787 on localhost only, expecting a TLS reverse proxy in front.
+- **SETUP_PROMPT.md** is assistant-agnostic: MCP connector first, webhook for shell-capable agents, email for the rest.
+
+## Status
+All milestones done. `pytest`: 116 passed. `scripts/demo.sh` produces `out/brief-thermal-58mm.png`, `brief-thermal-80mm.png`, `brief-a4.pdf`, `brief-letter.pdf`, all reviewed visually; QR codes in all four decode correctly (OpenCV).
+
+## Not done / next
+- Cat printer BLE transport (encoder done), BLE presence is a sketch, IMAP inbound transport is a stub.
+- No OAuth for MCP; the token-in-URL is the credential. Add OAuth (MCP auth spec) before public multi-user use.
+- No hardware was attached during development: CUPS, ESC/POS, IPP and SMTP are exercised in dry-run and against fakes, not real printers.
+- IPP direct send assumes the printer accepts PDF; PWG-raster/URF encoding for printers that don't is not implemented (the error message points to a driverless CUPS queue instead).

@@ -1,5 +1,5 @@
 {
-  "title": "Wednesday briefing",
+  "title": "Morning briefing",
   "blocks": [
     {"type": "heading", "text": "Today"},
     {"type": "row", "left": "09:30 Design review: relay API", "right": "Room 4"},

@@ -195,6 +195,8 @@ def test_file_adapter_writes_and_dry_runs(sample_brief, tmp_path):
     res = print_brief(sample_brief, load_profile("thermal-58mm"), dry, date=DAY)
     assert res.dry_run and res.artifacts[0].endswith("daily-times-2026-10-21-thermal-58mm.png")
     assert not (tmp_path / "dry").exists()
+    named = get_adapter("file", dry_run=True, directory=str(tmp_path), name="brief-{profile}")
+    assert named.send(job(sample_brief, "a4", ("pdf",))).artifacts == [str(tmp_path / "brief-a4.pdf")]
 
 
 # ------------------------------------------------------------------ calibration / CLI

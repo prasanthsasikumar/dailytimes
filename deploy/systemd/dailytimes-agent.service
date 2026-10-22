@@ -1,0 +1,20 @@
+# Install:  sudo cp dailytimes-agent.service /etc/systemd/system/
+#           sudo systemctl daemon-reload && sudo systemctl enable --now dailytimes-agent
+# Token:    put DAILYTIMES_TOKEN=dt_... in /etc/dailytimes/agent.env (chmod 600)
+[Unit]
+Description=Daily Times device agent
+Wants=network-online.target
+After=network-online.target cups.service
+
+[Service]
+Type=simple
+User=pi
+# gpio: PIR/mmWave sensors; lp: USB printers; dialout: serial printers
+SupplementaryGroups=gpio lp dialout
+EnvironmentFile=-/etc/dailytimes/agent.env
+ExecStart=/home/pi/.local/bin/dailytimes agent --config /home/pi/.config/dailytimes/agent.yaml
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

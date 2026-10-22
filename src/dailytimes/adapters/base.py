@@ -109,7 +109,7 @@ def _load_plugins() -> None:
             continue
 
 
-def get_adapter(name: str, dry_run: bool = False, **options: Any) -> Adapter:
+def get_adapter(name: str, /, dry_run: bool = False, **options: Any) -> Adapter:
     if name not in REGISTRY:
         _load_plugins()
     try:

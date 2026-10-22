@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Install: edit paths/USERNAME, then
+       cp org.dailytimes.agent.plist ~/Library/LaunchAgents/
+       launchctl load -w ~/Library/LaunchAgents/org.dailytimes.agent.plist
+     Logs: /tmp/dailytimes-agent.log -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>org.dailytimes.agent</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/USERNAME/.local/bin/dailytimes</string>
+    <string>agent</string>
+    <string>--config</string>
+    <string>/Users/USERNAME/.config/dailytimes/agent.yaml</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>DAILYTIMES_TOKEN</key><string>dt_REPLACE_ME</string>
+    <key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>StandardOutPath</key><string>/tmp/dailytimes-agent.log</string>
+  <key>StandardErrorPath</key><string>/tmp/dailytimes-agent.log</string>
+</dict>
+</plist>

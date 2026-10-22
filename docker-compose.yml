@@ -1,0 +1,19 @@
+# Relay only. The device agent runs next to the printer (see deploy/).
+# Put it behind a TLS reverse proxy (Caddy, nginx, Traefik) at e.g. https://times.example.com.
+services:
+  relay:
+    build: .
+    image: dailytimes-relay:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8787:8787"   # proxy terminates TLS; don't expose plain HTTP publicly
+    environment:
+      DAILYTIMES_PUBLIC_URL: ${DAILYTIMES_PUBLIC_URL:-http://localhost:8787}
+      DAILYTIMES_ADMIN_TOKEN: ${DAILYTIMES_ADMIN_TOKEN:?set an admin token for device registration}
+      DAILYTIMES_INBOUND_DOMAIN: ${DAILYTIMES_INBOUND_DOMAIN:-in.example.com}
+      DAILYTIMES_INBOUND_SECRET: ${DAILYTIMES_INBOUND_SECRET:-}
+    volumes:
+      - dailytimes-data:/data
+
+volumes:
+  dailytimes-data:

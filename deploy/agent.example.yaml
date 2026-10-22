@@ -1,0 +1,41 @@
+# Device agent config. Copy to ~/.config/dailytimes/agent.yaml and edit.
+relay:
+  url: https://times.example.com
+  token_env: DAILYTIMES_TOKEN        # or `token: dt_...` (keep this file private)
+
+# timezone: Pacific/Auckland         # default: the device timezone set on the relay
+poll_interval_seconds: 300
+state_file: ~/.local/state/dailytimes/agent.json
+
+rules:
+  print_after: "06:30"               # first presence after this prints
+  cooldown_minutes: 15               # min. gap between attempts
+  fallback: retry                    # retry | placeholder | skip (if no brief by fallback_after)
+  fallback_after: "10:00"
+
+presence:
+  backend: manual                    # manual | gpio | simulated | ble
+  options: {host: 127.0.0.1, port: 8765}
+  # PIR / mmWave sensor on GPIO17:
+  # backend: gpio
+  # options: {pin: 17, active_high: true, bounce_ms: 200, hold_seconds: 0.5}
+  # Push button on GPIO27 plus the HTTP endpoint:
+  # backend: manual
+  # options: {port: 8765, button_pin: 27}
+
+outputs:                             # one or more printers; run `dailytimes printers` to find yours
+  - profile: thermal-80mm
+    adapter: escpos
+    options: {connection: usb, vendor_id: "0x04b8", product_id: "0x0e28"}
+  # - profile: thermal-58mm
+  #   adapter: escpos
+  #   options: {connection: network, host: 192.168.1.50, port: 9100}
+  # - profile: a4
+  #   adapter: cups
+  #   options: {printer: Brother_HL_L2350DW}          # or uri: ipp://printer.local/ipp/print
+  # - profile: letter
+  #   adapter: email
+  #   options: {to: abc123@hpeprint.com, smtp_host: smtp.example.com, username: me@example.com, password_env: SMTP_PASSWORD}
+  # - profile: a4
+  #   adapter: file
+  #   options: {directory: ~/DailyTimes, formats: [pdf]}
