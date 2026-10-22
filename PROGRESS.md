@@ -3,7 +3,7 @@
 ## Milestones
 - [x] M1 Block schema + strict validation, relay (SQLite store, webhook, inbound email, MCP `print_brief`, device API)
 - [x] M2 Rendering: one layout engine, raster + PDF renderers, nameplate, YAML profiles
-- [ ] M3 Output adapters (CUPS/IPP, ESC/POS, cat printer stub, email-to-print, file) + `printers` / `test-print` CLI
+- [x] M3 Output adapters (CUPS/IPP, ESC/POS, cat printer stub, email-to-print, file) + `printers` / `test-print` CLI
 - [ ] M4 Device agent: polling, presence backends, print rules, status reporting
 - [ ] M5 SETUP_PROMPT.md, deploy files (docker-compose, systemd, launchd), README, demo.sh
 
@@ -23,3 +23,9 @@
 - **Slip layout**: compact nameplate, inverted-bar section headings, dotted leaders on rows, centred QR.
 - **Letter** profiles use US date order; everything else uses day-month-year.
 - **Profiles** are looked up in `$DAILYTIMES_PROFILES`, `~/.config/dailytimes/profiles`, then the package. Shipped: thermal-58mm, thermal-80mm, a4, letter, plus a5 and receipt-80mm-pdf.
+- **Adapters** declare the formats they accept; the caller renders for the printer's profile in that format (`adapters.print_brief`). Registry + `dailytimes.adapters` entry-point group, so a new printer type is one adapter class + one profile YAML (tested with a throwaway adapter).
+- **CUPS/IPP**: `printer=` uses `lp` (PDF on stdin, `media=` from the profile, custom length for receipt PDFs). `uri=` sends an IPP/1.1 Print-Job with a small built-in encoder (no pycups/ipptool dependency). Printers that refuse PDF get a hint to add a driverless CUPS queue (`lpadmin … -m everywhere`). Discovery: `lpstat -v` + mDNS (`_ipp._tcp`, `_ipps._tcp`, and `_pdl-datastream._tcp` = raw 9100, suggested as ESC/POS).
+- **ESC/POS** uses python-escpos `GS v 0` raster in 512-line fragments; cuts only if the profile has a cutter, otherwise feeds past the tear bar. Dry-run encodes into `escpos.printer.Dummy`.
+- **Cat printers**: encoder implemented and tested; BLE transport is a stub (docs/cat-printers.md).
+- **Email-to-print** sends the PDF over SMTP (STARTTLS, or implicit TLS on 465); `password_env` keeps secrets out of config.
+- **Profile suggestion** is name/model heuristics (58/80 mm keywords, TM-/TSP/POS models); page printers get Letter in US/CA/MX/PH/... locales, A4 elsewhere.
