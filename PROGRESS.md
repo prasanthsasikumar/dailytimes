@@ -39,8 +39,11 @@
 - **Docker** packages only the relay (`.[relay]`), runs as non-root with SQLite on a volume, and publishes 8787 on localhost only, expecting a TLS reverse proxy in front.
 - **SETUP_PROMPT.md** is assistant-agnostic: MCP connector first, webhook for shell-capable agents, email for the rest.
 
+- **Full-page A4/Letter** (`fill_page: true` on a4, letter, a5): the layout picks the largest type scale in 0.85x-1.3x at which the brief fits exactly one page, by binary search over full layouts. Light briefs grow (capped so it never looks like large print); briefs that would spill a few lines are tightened back onto one page; longer ones keep normal size and paginate. Filling the page with *content* is the assistant's job: the tool description and SETUP_PROMPT now ask for 35-50 blocks on a page printer, 10-20 on receipts, with extra sections (weather, week ahead, papers, deadlines).
+- **Samples are fictional** (Example Corp, example.com links, "Sample edition" title) so placeholder data can't be mistaken for real news or the user's own calendar. `examples/full_page_brief.json` is a 45-block full-page sample.
+
 ## Status
-All milestones done. `pytest`: 116 passed. `scripts/demo.sh` produces `out/brief-thermal-58mm.png`, `brief-thermal-80mm.png`, `brief-a4.pdf`, `brief-letter.pdf`, all reviewed visually; QR codes in all four decode correctly (OpenCV).
+All milestones done. `pytest`: 118 passed. `scripts/demo.sh` produces `out/brief-thermal-58mm.png`, `brief-thermal-80mm.png`, `brief-a4.pdf`, `brief-letter.pdf`, all reviewed visually; QR codes in all four decode correctly (OpenCV).
 
 ## Not done / next
 - Cat printer BLE transport (encoder done), BLE presence is a sketch, IMAP inbound transport is a stub.

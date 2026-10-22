@@ -186,10 +186,14 @@ def test_email_dry_run_builds_pdf_message(sample_brief):
 def test_file_adapter_writes_and_dry_runs(sample_brief, tmp_path):
     a = get_adapter("file", directory=str(tmp_path), formats=["pdf", "png"])
     assert a.formats_for(load_profile("a4")) == ("pdf", "raster")
-    res = a.send(job(sample_brief, "a5", ("pdf", "raster")))
+    from dailytimes.blocks import Brief
+
+    long = Brief.model_validate({"blocks": [{"type": "text", "text": f"Item {i} " + "word " * 25}
+                                            for i in range(40)]})
+    res = a.send(job(long, "a5", ("pdf", "raster")))
     names = sorted(p.name for p in tmp_path.iterdir())
-    assert names == ["daily-times-2026-10-21-a5-p1.png", "daily-times-2026-10-21-a5-p2.png",
-                     "daily-times-2026-10-21-a5.pdf"]
+    assert names[:2] == ["daily-times-2026-10-21-a5-p1.png", "daily-times-2026-10-21-a5-p2.png"]
+    assert names[-1] == "daily-times-2026-10-21-a5.pdf"
     assert res.ok and not res.dry_run
     dry = get_adapter("file", dry_run=True, directory=str(tmp_path / "dry"))
     res = print_brief(sample_brief, load_profile("thermal-58mm"), dry, date=DAY)

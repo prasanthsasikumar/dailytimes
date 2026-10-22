@@ -9,3 +9,4 @@ columns: 1
 cutter: false
 color: false
 font_scale: 0.95
+fill_page: true

@@ -8,3 +8,4 @@ margins_mm: [13, 14, 13, 14]
 columns: 2
 cutter: false
 color: false
+fill_page: true

@@ -53,7 +53,7 @@ def test_webhook_json_roundtrip(client, device, sample_dict):
     r = client.post("/v1/briefs", json=sample_dict, headers=device["h"])
     assert r.status_code == 202 and r.json()["status"] == "queued"
     p = client.get("/v1/device/brief", headers=device["h"]).json()
-    assert p["title"] == "Morning briefing" and len(p["blocks"]) == len(sample_dict["blocks"])
+    assert p["title"] == "Sample edition" and len(p["blocks"]) == len(sample_dict["blocks"])
     assert p["blocks"][0] == {"type": "heading", "text": "Today", "level": 1}
 
 

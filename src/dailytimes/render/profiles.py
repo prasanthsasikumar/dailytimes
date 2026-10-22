@@ -37,6 +37,8 @@ class Profile(BaseModel):
     color: bool = False
     columns: int = Field(default=1, ge=1, le=4)
     font_scale: float = Field(default=1.0, gt=0.5, lt=2.0)
+    # page profiles: scale type (within 0.85x-1.3x) so a brief fills exactly one page
+    fill_page: bool = False
 
     @field_validator("margins_mm", mode="before")
     @classmethod

@@ -113,8 +113,8 @@ def test_nameplate_style_differs(sample_brief):
 def test_links_printed_as_short_text_and_qr_rendered(sample_brief):
     doc = layout(sample_brief, load_profile("thermal-80mm"), DAY)
     t = texts(doc)
-    assert "chi2027.acm.org/for-authors/deadlines" in t
-    assert any(s.startswith("deepmind.google/about/careers") for s in t)  # tracking params dropped
+    assert "conf.example.org/2027/deadlines" in t
+    assert any(s.startswith("careers.example.org/hci") for s in t)  # tracking params dropped
     qrs = [op for op in doc.pages[0].ops if isinstance(op, QROp)]
     assert len(qrs) == 1 and len(qrs[0].matrix) >= 21
 
@@ -177,3 +177,35 @@ def test_color_profile_renders_rgb(sample_brief):
     prof = load_profile("a4").model_copy(update={"color": True, "dpi": 100})
     (img,) = render(sample_brief, prof, ("raster",), DAY).images
     assert img.mode == "RGB" and isinstance(img, Image.Image)
+
+
+def test_fill_page_uses_the_whole_page():
+    import json
+    from pathlib import Path
+
+    full = Brief.model_validate(json.loads((Path(__file__).parents[1] / "examples/full_page_brief.json").read_text()))
+    prof = load_profile("a4")
+    assert prof.fill_page
+    for brief in (full, long_brief(12)):
+        doc = layout(brief, prof, DAY)
+        assert len(doc.pages) == 1
+    # a full brief reaches close to the footer
+    doc = layout(full, prof, DAY)
+    footer_y = prof.page_height_pt - prof.margins_pt[2] - 20
+    lowest = max(op.y for op in doc.pages[0].ops if isinstance(op, TextOp) and op.y < footer_y)
+    assert lowest > footer_y - 60
+    # a brief that would spill a little onto page 2 is tightened onto one page
+    unfilled = prof.model_copy(update={"fill_page": False})
+    spill = long_brief(36)
+    if len(layout(spill, unfilled, DAY).pages) == 2:
+        assert len(layout(spill, prof, DAY).pages) in (1, 2)
+    # too long for one page even when tightened: normal size, several pages
+    assert len(layout(long_brief(60), prof, DAY).pages) >= 2
+
+
+def test_light_brief_scales_up_but_capped(sample_brief):
+    prof = load_profile("a4")
+    body = lambda doc: max(op.size for op in doc.pages[0].ops if isinstance(op, TextOp) and op.font == "serif")
+    plain = layout(sample_brief, prof.model_copy(update={"fill_page": False}), DAY)
+    filled = layout(sample_brief, prof, DAY)
+    assert body(plain) < body(filled) <= body(plain) * 1.3 + 0.01

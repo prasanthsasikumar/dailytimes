@@ -29,6 +29,9 @@ Edit the bracketed bits first. Everything else can stay as is.
 Please set up a recurring task called "The Daily Times" that runs every day at [06:00] in my
 timezone ([Pacific/Auckland]). Run it once right now as a test, then keep the schedule.
 
+My printer: [an A4 page printer: fill exactly one full page, 35-50 blocks]
+(or: [a receipt printer: keep it to 10-20 blocks]).
+
 Each run, act as the editor of my personal one-page morning paper. Use what you already know
 about me (memory, past conversations, connected apps) to decide what matters to me. Gather:
 
@@ -45,6 +48,11 @@ about me (memory, past conversations, connected apps) to decide what matters to 
 6. Markets: previous close and % change for [AAPL, NVDA, NZX 50]. One row each.
 7. Anything else you know I'm tracking: [e.g. "visa application status", "my team's sprint deadline"].
 
+For a full page, also add: today's weather for [my city] as one row; the week ahead (my
+next 3-4 calendar commitments beyond today); two or three new papers in my field with the
+key result in one sentence; and a deadlines list (left: what, right: when). Prefer more
+distinct items over longer ones.
+
 Editorial rules (these matter more than coverage):
 - Concrete facts only: names, numbers, dates, times, places. No filler, no greetings, no
   motivational lines, no summaries of what you did.
@@ -52,16 +60,16 @@ Editorial rules (these matter more than coverage):
   section is dropped entirely, not padded.
 - Every news, job or community item gets exactly one source link (its `url`), the page you
   actually read. Calendar, email and market rows don't need links.
-- Keep it short: it's read standing at a printer. 8-20 blocks. One sentence per item where
-  possible, two at most.
+- Short items: one sentence each where possible, two at most (the lead story may take
+  three or four). Fill the length set above with more items, not longer ones.
 - Plain text. No markdown, no emoji.
 
 Then call the `print_brief` tool once with:
 - `title`: a short edition line, e.g. "Thursday briefing".
 - `blocks`, in this shape:
   - `heading` (level 1) per section: "Today", "Inbox", "Your field", "Jobs", "Communities", "Markets".
-  - `row` for calendar entries (left "09:30 Design review", right "Room 4") and market prices
-    (left "AAPL", right "$231.40 +1.2%").
+  - `row` for calendar entries (left "09:30 Design review", right "Room 4"), weather,
+    deadlines and market prices (left "EXMPL", right "$231.40 +1.2%").
   - `bullet` with `url` for news, jobs and community posts; `text` for the one or two items
     that need a sentence of context, with `url` if it's a claim from the web.
   - `heading` level 2 only for a single lead story if there is a clearly most important item.

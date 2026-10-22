@@ -28,13 +28,15 @@ email-to-print inkjet, and only **when someone walks up to it**.
 |---|---|
 | compact nameplate, inverted section bars, dotted leaders | blackletter masthead, date bar, two balanced columns |
 
-Run `./scripts/demo.sh` to see all four in `./out`.
+Run `./scripts/demo.sh` to see all four in `./out`. For a full A4 front page, render
+`examples/full_page_brief.json`: `dailytimes render examples/full_page_brief.json --profile a4`.
+All sample content is fictional placeholder data.
 
 ## Quick start (local, five minutes)
 
 ```bash
 uv venv && uv pip install -e ".[dev]"          # or: python -m venv .venv && pip install -e ".[dev]"
-.venv/bin/pytest -q                            # 116 tests
+.venv/bin/pytest -q                            # 118 tests
 ./scripts/demo.sh                              # relay + agent + MCP + webhook + presence -> ./out
 ```
 
@@ -119,6 +121,7 @@ cutter: true
 color: false
 columns: 1
 font_scale: 1.0
+fill_page: false         # page profiles: scale type 0.85x-1.3x so the brief fills exactly one page
 ```
 
 | adapter | options | takes |

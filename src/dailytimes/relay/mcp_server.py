@@ -25,8 +25,11 @@ Editorial rules:
 - Concrete facts only: names, numbers, times, places. No filler, no motivational lines.
 - Never invent anything. If you could not verify an item, leave it out.
 - One source link per item, in that item's `url`. No link means no claim that needs one.
-- Keep it short: it is read standing at a printer. Aim for 8-20 blocks; about one page
-  on A4 or 30-50 cm of receipt paper. Hard limits: {MAX_BLOCKS} blocks, {MAX_TOTAL_CHARS} characters.
+- Keep it short per item: one or two sentences, every line earns its place. Overall length
+  follows the user's printer (their instructions say which): a receipt printer takes 10-20
+  blocks; a full A4/Letter page holds 35-50 blocks and the layout scales the type so the
+  brief fills exactly one page. If unsure, aim for 20-30.
+  Hard limits: {MAX_BLOCKS} blocks, {MAX_TOTAL_CHARS} characters.
 - Plain text only: no markdown, no emoji.
 - Items the user already saw in the last 60 days are dropped automatically and listed in
   the result under `dropped_duplicates`.
@@ -35,7 +38,7 @@ Blocks:
 - heading {{text, level: 1 section | 2 headline}}
 - text {{text, url?}} short paragraph
 - bullet {{text, url?}} one list item
-- row {{left, right}} e.g. "09:30 Design review" | "Room 4", or "AAPL" | "$231.40 +1.2%"
+- row {{left, right}} e.g. "09:30 Design review" | "Room 4", or "EXMPL" | "$231.40 +1.2%"
 - divider {{}}
 - qr {{url, caption?}} at most one or two per brief, for the link worth opening on a phone
 - small {{text}} small print: sources, caveats

@@ -514,7 +514,39 @@ def layout(brief: Brief, profile: Profile, date: dt.date | None = None) -> Docum
     t = theme_for(profile)
     if profile.continuous:
         return _layout_roll(brief, profile, t, date)
+    if profile.fill_page:
+        return _layout_filled(brief, profile, date)
     return _layout_pages(brief, profile, t, date)
+
+
+FILL_MIN, FILL_MAX = 0.85, 1.3
+
+
+def _layout_filled(brief: Brief, profile: Profile, date: dt.date) -> Document:
+    """Pick the largest type scale at which the brief still fits on one page.
+
+    A light brief grows to use the page; one that spills a few lines onto page 2 is
+    tightened back onto one. Briefs too long for one page even at FILL_MIN keep normal size.
+    """
+    def at(scale: float) -> Document:
+        p = profile.model_copy(update={"font_scale": profile.font_scale * scale})
+        doc = _layout_pages(brief, p, theme_for(p), date)
+        doc.profile = profile
+        return doc
+
+    if len(at(FILL_MIN).pages) > 1:
+        return at(1.0)
+    best = at(FILL_MAX)
+    if len(best.pages) == 1:
+        return best
+    lo, hi = FILL_MIN, FILL_MAX
+    for _ in range(10):
+        mid = (lo + hi) / 2
+        if len(at(mid).pages) == 1:
+            lo = mid
+        else:
+            hi = mid
+    return at(lo)
 
 
 def _layout_roll(brief: Brief, profile: Profile, t: Theme, date: dt.date) -> Document:

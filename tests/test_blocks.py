@@ -16,7 +16,7 @@ def brief(*blocks, **kw):
 
 
 def test_sample_is_valid(sample_brief):
-    assert sample_brief.title == "Morning briefing"
+    assert sample_brief.title == "Sample edition"
     assert {b.type for b in sample_brief.blocks} == {"heading", "row", "text", "divider", "bullet", "qr", "small"}
 
 
