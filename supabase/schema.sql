@@ -85,3 +85,8 @@ alter table dt_logins enable row level security;
 alter table dt_briefs enable row level security;
 alter table dt_receipts enable row level security;
 alter table dt_history enable row level security;
+
+-- Newer Supabase projects don't grant table access to the API roles by default.
+-- Only the server's service role gets access; anon/authenticated get nothing.
+grant all on table dt_users, dt_devices, dt_pairings, dt_logins, dt_briefs, dt_receipts, dt_history to service_role;
+revoke all on table dt_users, dt_devices, dt_pairings, dt_logins, dt_briefs, dt_receipts, dt_history from anon, authenticated;

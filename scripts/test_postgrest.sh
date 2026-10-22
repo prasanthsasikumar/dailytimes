@@ -34,9 +34,10 @@ for _ in $(seq 1 50); do psql -h 127.0.0.1 -p "$PGPORT" -U postgres -c 'select 1
 # Supabase-like roles: the API connects as `authenticator` and switches to the JWT's role.
 psql -q -h 127.0.0.1 -p "$PGPORT" -U postgres -v ON_ERROR_STOP=1 <<SQL
 create role anon nologin;
+create role authenticated nologin;
 create role service_role nologin bypassrls;
 create role authenticator login noinherit;
-grant anon, service_role to authenticator;
+grant anon, authenticated, service_role to authenticator;
 grant usage on schema public to anon, service_role;
 alter default privileges in schema public grant all on tables to anon, service_role;
 SQL
