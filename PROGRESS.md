@@ -4,7 +4,7 @@
 - [x] M1 Block schema + strict validation, relay (SQLite store, webhook, inbound email, MCP `print_brief`, device API)
 - [x] M2 Rendering: one layout engine, raster + PDF renderers, nameplate, YAML profiles
 - [x] M3 Output adapters (CUPS/IPP, ESC/POS, cat printer stub, email-to-print, file) + `printers` / `test-print` CLI
-- [ ] M4 Device agent: polling, presence backends, print rules, status reporting
+- [x] M4 Device agent: polling, presence backends, print rules, status reporting
 - [ ] M5 SETUP_PROMPT.md, deploy files (docker-compose, systemd, launchd), README, demo.sh
 
 ## Decisions (ambiguities resolved with the simplest reasonable option)
@@ -29,3 +29,9 @@
 - **Cat printers**: encoder implemented and tested; BLE transport is a stub (docs/cat-printers.md).
 - **Email-to-print** sends the PDF over SMTP (STARTTLS, or implicit TLS on 465); `password_env` keeps secrets out of config.
 - **Profile suggestion** is name/model heuristics (58/80 mm keywords, TM-/TSP/POS models); page printers get Letter in US/CA/MX/PH/... locales, A4 elsewhere.
+- **Agent rules** (pure, in `agent/rules.py`): ignore if already printed today, before `print_after`, or within `cooldown_minutes` of the last attempt; otherwise print if a brief is waiting. With no brief: `retry` (default) waits for a later presence; `placeholder` prints a short "no brief yet" slip and `skip` silently closes the day, both only after `fallback_after`. A presence that gets past the gate counts as an attempt (starts the cooldown).
+- **Agent state** (printed_on, last_attempt) lives in a JSON file, so a restart never double-prints; the relay also stops serving a brief once it's reported `printed`.
+- **Multiple outputs** per agent (e.g. a receipt printer plus a PDF archive folder); the brief counts as printed if any output succeeds, and failures are reported to the relay as detail.
+- **Agent timezone** defaults to the device timezone stored on the relay, so "today" means the same thing on both sides.
+- **Relay outage**: the agent polls every `poll_interval_seconds` and caches today's brief, so it can still print from cache when the relay is unreachable at presence time.
+- **Presence**: `manual` = local HTTP `POST /presence` (also used by `dailytimes presence`, phone shortcuts) plus optional GPIO push button; `gpio` = gpiozero `DigitalInputDevice` (PIR/mmWave OUT pin) with debounce and optional hold time; `simulated` = stdin/timer/code; `ble` = stub with bleak scanning and RSSI threshold (needs a stable advertiser, since phones randomise addresses).
