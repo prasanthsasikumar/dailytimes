@@ -1,0 +1,10 @@
+name: thermal-80mm
+description: 80 mm thermal receipt printer (576 dots at 203 dpi), e.g. Epson TM-T20/T88, Star TSP100
+type: thermal
+layout: slip
+dpi: 203
+paper_width_mm: 80
+printable_width_px: 576
+margins_mm: [4, 2, 6, 2]
+cutter: true
+color: false

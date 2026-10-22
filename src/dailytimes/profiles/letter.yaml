@@ -1,0 +1,10 @@
+name: letter
+description: US Letter page printer (laser/inkjet) via CUPS, IPP or email; newspaper layout
+type: page
+layout: newspaper
+dpi: 300
+page_size: Letter
+margins_mm: [13, 15, 13, 15]
+columns: 2
+cutter: false
+color: false

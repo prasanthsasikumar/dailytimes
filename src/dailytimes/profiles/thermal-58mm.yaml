@@ -1,0 +1,11 @@
+name: thermal-58mm
+description: 58 mm thermal receipt printer (384 dots at 203 dpi), e.g. Goojprt, Xprinter XP-58, most cat printers
+type: thermal
+layout: slip
+dpi: 203
+paper_width_mm: 58
+printable_width_px: 384
+margins_mm: [4, 1.5, 8, 1.5]   # top right bottom left
+cutter: false
+color: false
+font_scale: 0.92

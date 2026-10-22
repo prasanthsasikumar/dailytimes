@@ -1,0 +1,11 @@
+name: a5
+description: A5 page (or A4 folded in half); single-column newspaper layout
+type: page
+layout: newspaper
+dpi: 300
+page_size: A5
+margins_mm: [11, 12, 11, 12]
+columns: 1
+cutter: false
+color: false
+font_scale: 0.95

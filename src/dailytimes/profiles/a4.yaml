@@ -1,0 +1,10 @@
+name: a4
+description: A4 page printer (laser/inkjet) via CUPS, IPP or email; newspaper layout
+type: page
+layout: newspaper
+dpi: 300
+page_size: A4
+margins_mm: [13, 14, 13, 14]
+columns: 2
+cutter: false
+color: false

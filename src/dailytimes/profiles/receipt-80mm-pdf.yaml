@@ -1,0 +1,10 @@
+name: receipt-80mm-pdf
+description: Receipt-length PDF, 80 mm wide, for thermal printers with a CUPS driver (Star, Epson, Zjiang)
+type: page
+layout: slip
+dpi: 203
+page_size: receipt
+paper_width_mm: 80
+margins_mm: [4, 4, 6, 4]
+cutter: true
+color: false
