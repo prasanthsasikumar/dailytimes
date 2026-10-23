@@ -58,16 +58,18 @@
 - **Interest suggestion** is a keyword heuristic by default (the text never leaves the server), with acronym expansion (HCI -> human-computer interaction, after "HCI" matched an insurer). If the operator sets `ANTHROPIC_API_KEY`, Claude (`claude-opus-5-5`, low effort, server-side refusal fallback) proposes sources instead, and the page says so. Either way the user reviews and edits.
 - **User feed URLs are fetched with SSRF protection** (public IPs only, re-checked on each redirect, size/time caps). Known gap: DNS-rebinding race, documented in PRIVACY.md.
 - **MCP is built per request** (fresh stateless server and session manager), because serverless hosts may not run ASGI lifespan events, which the SDK's session manager depends on.
+- **Vercel quirks found on deploy**: it installs from `pyproject.toml` (not `requirements.txt`), so the server deps became core dependencies; its rewrite hands the function `/api/index` and drops the original path, so the rewrite passes it as `?__path=` and `api/index.py` restores it; new Supabase `sb_secret_` keys must go in the `apikey` header only; new Supabase projects grant nothing to API roles, so `schema.sql` grants `service_role` explicitly.
 - **Vercel**: `api/index.py` + `vercel.json` (all routes to one function, `includeFiles: src/**`, a daily cron, which is the Hobby limit and enough since editions build on demand). The app refuses to start on Vercel without Supabase or without `DAILYTIMES_SECRET` (a random per-instance secret would sign people out on every cold start).
 - **Retention**: editions and receipts 30 days, seen-link history 60 days, codes/links minutes; purged at most hourly on writes and by the daily cron.
 
 ## Status
-All milestones done. `pytest`: 155 passed; `scripts/test_postgrest.sh`: 32 passed (store suite on SQLite and on Postgres+PostgREST). `scripts/demo.sh` produces `out/brief-thermal-58mm.png`, `brief-thermal-80mm.png`, `brief-a4.pdf`, `brief-letter.pdf`, all reviewed visually; QR codes in all four decode correctly (OpenCV).
+All milestones done. `pytest`: 156 passed; `scripts/test_postgrest.sh`: 32 passed (store suite on SQLite and on Postgres+PostgREST). `scripts/demo.sh` produces `out/brief-thermal-58mm.png`, `brief-thermal-80mm.png`, `brief-a4.pdf`, `brief-letter.pdf`, all reviewed visually; QR codes in all four decode correctly (OpenCV).
 
 ## Not done / next
 - Cat printer BLE transport (encoder done), BLE presence is a sketch, IMAP inbound transport is a stub.
 - No OAuth for MCP; the token-in-URL is the credential (rotatable, write-only). OAuth per the MCP auth spec is the next step for a public service.
-- Not deployed anywhere yet: Vercel and Supabase setup are documented and the Supabase path is tested against PostgREST locally, but no live deploy was made.
+- Live at https://dailytimes-three.vercel.app (Vercel project `dailytimes`, region iad1; Supabase project `zcdtbwtbcyaxtkntjkjx`, us-east-1). Verified end to end on 2026-10-23 with a throwaway account: auto edition from live sources, PDF/PNG, endpoint over MCP and webhook, pairing, printer poll and report, export, delete. `times.flowsxr.com` is attached to the project but waits on a CNAME at NS1; `DAILYTIMES_PUBLIC_URL` points at the vercel.app address until then.
+- From Vercel, arXiv sometimes times out (8 s read limit) and Reddit rate-limits (429); those sections are then simply left out.
 - Email delivery (Resend/SMTP) and the optional Claude suggestion are exercised only with fakes in tests.
 - No hardware was attached during development: CUPS, ESC/POS, IPP and SMTP are exercised in dry-run and against fakes, not real printers.
 - IPP direct send assumes the printer accepts PDF; PWG-raster/URF encoding for printers that don't is not implemented (the error message points to a driverless CUPS queue instead).
