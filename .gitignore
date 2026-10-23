@@ -8,3 +8,8 @@ out/
 *.sqlite3
 .env
 .cache/
+.vercel
+.env*
+.env.local
+.env*.local
+supabase/.temp/

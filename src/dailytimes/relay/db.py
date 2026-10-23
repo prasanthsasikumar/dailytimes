@@ -119,7 +119,11 @@ class SQLiteDB(Database):
 class SupabaseDB(Database):
     def __init__(self, url: str, service_key: str, http: httpx.Client | None = None, schema: str | None = None):
         self.base = url.rstrip("/") + "/rest/v1"
-        self.headers = {"apikey": service_key, "Authorization": f"Bearer {service_key}"}
+        # New-style keys (sb_secret_...) go in `apikey` only; Supabase rejects them as a Bearer
+        # token. Legacy JWT keys (service_role) need both headers.
+        self.headers = {"apikey": service_key}
+        if not service_key.startswith("sb_"):
+            self.headers["Authorization"] = f"Bearer {service_key}"
         if schema:
             self.headers["Accept-Profile"] = self.headers["Content-Profile"] = schema
         self.http = http or httpx.Client(timeout=15)
