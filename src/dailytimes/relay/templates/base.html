@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <title>{% block title %}The Daily Times{% endblock %}</title>
+<meta name="description" content="Your AI writes a one-page newspaper about your day. It prints on any printer you own, when you walk up to it. Open source and private by design.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Daily Times">
+<meta property="og:title" content="The Daily Times: your morning, in print">
+<meta property="og:description" content="Your AI writes a one-page newspaper about your day. It prints on any printer you own, when you walk up to it.">
+<meta property="og:url" content="{{ settings.public_url }}">
+<meta property="og:image" content="{{ settings.public_url }}/static/og.png">
+<meta property="og:image:width" content="1280"><meta property="og:image:height" content="640">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{{ settings.public_url }}/static/og.png">
+<link rel="icon" type="image/png" href="/static/favicon.png">
 <style>
 @font-face { font-family: "Masthead"; src: url("/static/fonts/UnifrakturMaguntia-Book.ttf"); font-display: swap; }
 @font-face { font-family: "PT Serif"; src: url("/static/fonts/PT_Serif-Web-Regular.ttf"); font-display: swap; }
@@ -45,7 +56,7 @@ button.danger { background: var(--accent); border-color: var(--accent); }
 .box { border: 1px solid var(--rule); padding: 16px 18px; margin: 16px 0; background: var(--field); }
 .notice { border-left: 4px solid var(--ink); padding: 10px 14px; background: var(--soft); margin: 16px 0; }
 .error { border-left-color: var(--accent); }
-code, .code { font: 14px/1.45 ui-monospace, "SF Mono", Menlo, monospace; background: var(--soft); padding: 2px 5px; word-break: break-all; }
+code, .code { font: 14px/1.45 ui-monospace, "SF Mono", Menlo, monospace; background: var(--soft); padding: 2px 5px; overflow-wrap: anywhere; }
 pre { font: 13px/1.5 ui-monospace, "SF Mono", Menlo, monospace; background: var(--soft); padding: 12px; overflow-x: auto; white-space: pre-wrap; }
 .copy { display: flex; gap: 8px; } .copy input { font: 14px ui-monospace, Menlo, monospace; }
 .preview { width: 100%; border: 1px solid var(--soft); box-shadow: 0 2px 14px rgba(0,0,0,.12); background: #fff; }
@@ -53,6 +64,9 @@ pre { font: 13px/1.5 ui-monospace, "SF Mono", Menlo, monospace; background: var(
 table { width: 100%; border-collapse: collapse; } td, th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--soft); font-size: 15px; }
 .steps { counter-reset: s; list-style: none; padding: 0; } .steps li { counter-increment: s; margin: 0 0 14px 44px; position: relative; }
 .steps li::before { content: counter(s); position: absolute; left: -44px; top: -2px; font: 700 22px "PT Serif", serif; border: 2px solid var(--ink); width: 32px; height: 32px; text-align: center; line-height: 28px; }
+.hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 32px; align-items: start; }
+.hero .sample { width: 100%; height: auto; margin-top: 30px; box-shadow: 0 6px 26px rgba(40,30,20,.22); transform: rotate(1.2deg); background: #fff; }
+@media (max-width: 760px) { .hero { grid-template-columns: 1fr; } .hero .sample { transform: none; } }
 footer { border-top: 1px solid var(--rule); margin-top: 48px; padding-top: 10px; font: 13px "PT Sans", sans-serif; color: var(--muted); display: flex; gap: 16px; flex-wrap: wrap; }
 footer a { color: var(--muted); }
 </style>
@@ -78,7 +92,7 @@ footer a { color: var(--muted); }
 </header>
 {% block body %}{% endblock %}
 <footer>
-  <span>The Daily Times is open source.</span>
+  <span>The Daily Times is <a href="{{ settings.repo_url }}">open source</a>.</span>
   <a href="/privacy">Privacy</a>
   {% if settings.contact %}<a href="mailto:{{ settings.contact }}">Contact</a>{% endif %}
   <span>Run by {{ settings.operator }}.</span>

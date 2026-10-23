@@ -131,7 +131,7 @@ def test_endpoint_mcp_webhook_and_newest_wins(client):
     assert res["isError"] is False
     r = client.post(webhook, content="# Hi\n- webhook item https://ex.com/w", headers={"content-type": "text/plain"})
     assert r.status_code == 202 and r.json()["superseded"] == 1
-    assert "Sent by your AI (webhook)" in client.get("/app").text
+    assert "Sent by your AI via webhook." in client.get("/app").text
 
     # rotating the endpoint kills the old one
     client.post("/app/connect", data={"csrf": csrf})

@@ -28,6 +28,7 @@ def _fill(color: str, mono: bool):
 def render_raster(doc: Document) -> list[Image.Image]:
     prof = doc.profile
     mono = not prof.color
+    hard = mono and prof.type == "thermal"  # thermal heads print dots: crisp 1-bit; page previews stay smooth
     scale = prof.dpi / 72
     images = []
     for page in doc.pages:
@@ -35,7 +36,7 @@ def render_raster(doc: Document) -> list[Image.Image]:
         height = math.ceil(page.height * scale)
         img = Image.new("L" if mono else "RGB", (width, height), 255 if mono else "white")
         d = ImageDraw.Draw(img)
-        if mono:
+        if hard:
             d.fontmode = "1"  # no anti-aliasing: thermal heads print dots, not greys
         for op in page.ops:
             if isinstance(op, TextOp):
@@ -48,7 +49,7 @@ def render_raster(doc: Document) -> list[Image.Image]:
                 d.rectangle([x0, y0, x1 - 1, y1 - 1], fill=_fill(op.color, mono))
             elif isinstance(op, QROp):
                 _qr(d, op, scale)
-        images.append(img.convert("1", dither=Image.Dither.NONE) if mono else img)
+        images.append(img.convert("1", dither=Image.Dither.NONE) if hard else img)
     return images
 
 

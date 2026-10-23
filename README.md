@@ -1,77 +1,124 @@
+<div align="center">
+
+<img src="docs/images/hero.png" alt="The Daily Times: a one-page newspaper on A4 and on a receipt slip" width="760">
+
 # The Daily Times
 
-A one-page newspaper about your day, printed on **whatever printer you own**, when someone
-walks up to it.
+**Your AI writes a one-page newspaper about your day.<br>It prints on any printer you own, when you walk up to it.**
 
-- **Sign up with an email and say what you're into.** Every morning you get an *auto edition*:
-  headlines, new papers, community posts, prices and weather from public sources, quoted exactly
-  as published.
-- **Connect any AI agent** (Claude, ChatGPT, Codex, Claude Code, n8n, a cron script) to your
-  private endpoint and it sends a richer *personal edition* using what it can see: your
-  calendar, inbox, chats. The newest edition of the day wins.
-- **Pair a printer** with a code: a receipt printer, a laser, an inkjet, an email-to-print
-  address, or none (read or print the PDF from the website).
-- **Private by design**: we store an email, interests and 30 days of editions. Never your
-  calendar or mail. Export or delete everything any time. Open source; run your own.
+[![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-black.svg)](pyproject.toml)
+[![MCP](https://img.shields.io/badge/MCP-print__brief-black.svg)](#connect-any-ai-agent)
+[![Tests](https://github.com/prasanthsasikumar/dailytimes/actions/workflows/tests.yml/badge.svg)](https://github.com/prasanthsasikumar/dailytimes/actions/workflows/tests.yml)
+[![Try it](https://img.shields.io/badge/try%20it-times.flowsxr.com-8b1a1a.svg)](https://times.flowsxr.com)
 
+[**Try it**](https://times.flowsxr.com) · [How it works](#how-it-works) · [Connect your AI](#connect-any-ai-agent) · [Any printer](#any-printer) · [Self-host](#run-your-own) · [Privacy](#privacy)
+
+</div>
+
+---
+
+Every morning you pick up your phone and get dragged into a dozen feeds. The Daily Times
+gives you one page instead: today's calendar, the emails that need you, what moved in your
+field, new papers, jobs, prices and the weather. On paper, waiting at the printer.
+
+- **Works without any AI.** Sign up, write one sentence about what you're into, and every
+  morning you get an *auto edition* from public sources, with headlines and numbers quoted
+  exactly as published.
+- **Better with your AI.** Point Claude, ChatGPT, Codex, Claude Code or any agent at your
+  private endpoint. It writes a *personal edition* from what only it can see (your calendar,
+  your inbox, your chats) and sends just the finished page.
+- **Any printer.** 58/80 mm receipt printers, office lasers, inkjets, IPP Everywhere,
+  email-to-print, cheap Bluetooth "cat" printers, or no printer at all (open the PDF).
+- **Prints when you walk up.** A tiny agent on a Raspberry Pi or Mac waits for a motion
+  sensor, a button or a phone tap, then prints once a day.
+- **Private by design.** We never see your calendar or mail. We keep an email, your interests
+  and 30 days of editions. Export or delete everything in one click. Open source, MIT.
+
+<p align="center"><img src="docs/images/papers.png" alt="The same paper on a 58 mm receipt, an 80 mm receipt and A4" width="900"></p>
+<p align="center"><sub>One layout engine, any paper: 58 mm and 80 mm receipts (crisp 1-bit raster), A4 and Letter (vector PDF, filled to exactly one page). All sample content is fictional.</sub></p>
+
+## How it works
+
+```mermaid
+flowchart LR
+    subgraph you [" "]
+      AI["Your AI<br/>Claude · ChatGPT · Codex<br/>(reads calendar + mail)"]
+      You["You<br/>times.flowsxr.com"]
+    end
+    AI -- "print_brief (MCP)<br/>or webhook / email" --> S
+    You -- "interests, printers" --> S
+    S["The Daily Times server<br/>editions · 60-day dedup<br/>auto edition from public sources"]
+    Pi["Printer agent<br/>Pi · Mac · Linux"] -- "polls" --> S
+    Sensor["Motion sensor · button · phone"] --> Pi
+    Pi --> P["Any printer<br/>receipt · laser · inkjet · email · PDF"]
 ```
-                          ┌──────── The Daily Times server ────────┐
- any AI agent ──MCP/webhook/email──▶  editions · dedup · accounts    │◀──poll── printer agent ──▶ printer
- (your endpoint)          │  auto edition from public sources      │          (Pi/Mac/Linux)   (receipt, laser,
- you ── website ─────────▶│  dashboard · pairing · export/delete   │              ▲             inkjet, email, PDF)
-                          └──── Vercel + Supabase, or Docker/SQLite ┘     presence: sensor, button, phone
-```
 
-| receipt (58/80 mm) | A4 / Letter |
-|---|---|
-| compact nameplate, inverted section bars, dotted leaders | blackletter masthead, date bar, two balanced columns, filled to exactly one page |
+1. **06:00**: your AI's daily task gathers your day and calls `print_brief`. If no AI sends
+   anything, the server builds an auto edition from your interests.
+2. **07:40**: you walk past the printer. The sensor fires, the agent fetches today's edition,
+   renders it for that exact printer, and prints it.
+3. It reports back, so it prints once per day per printer, and stories you've already seen
+   don't come back for 60 days.
 
-## Try it locally (five minutes)
+## Get started
+
+### Sign up (one minute)
+
+Go to **[times.flowsxr.com](https://times.flowsxr.com)**, enter your email, describe what
+you're into in a sentence. You'll see today's front page right away and can open it as a PDF.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/site-landing.png" alt="Landing page"><br><sub>Sign up with just an email.</sub></td>
+<td width="50%"><img src="docs/images/site-interests.png" alt="Interests page"><br><sub>One sentence becomes topics, subreddits, tickers, papers and weather. Edit anything.</sub></td>
+</tr>
+<tr>
+<td><img src="docs/images/site-dashboard.png" alt="Today's edition"><br><sub>Today's edition, as PDF (A4, Letter) or receipt image.</sub></td>
+<td><img src="docs/images/site-printers.png" alt="Pairing a printer"><br><sub>Pair a printer with a one-time code.</sub></td>
+</tr>
+</table>
+
+### Connect any AI agent
+
+On **Connect AI** you get one private URL. It can only *add* editions to your paper: it can't
+read anything back, and you can replace it at any time.
 
 ```bash
-uv venv && uv pip install -e ".[dev]"            # or: python -m venv .venv && pip install -e ".[dev]"
-DAILYTIMES_DEV=1 .venv/bin/dailytimes serve      # http://localhost:8787 (sign-in link shown on screen)
+# Claude Code
+claude mcp add --transport http dailytimes "https://times.flowsxr.com/u/<your-token>/mcp"
 ```
 
-Sign up, describe your interests, press *Build today's auto edition now*, open the PDF.
+- **Claude** (web/desktop): Settings → Connectors → *Add custom connector* → paste the URL.
+- **ChatGPT**: Settings → Apps & Connectors → developer mode → *Create* → paste the URL.
+- **Codex**: `[mcp_servers.dailytimes] url = "<URL>"` in `~/.codex/config.toml`.
+- **Anything else** (n8n, Zapier, cron, a shell script): `POST` JSON or plain text to the webhook URL.
+
+Then paste the prompt from the page (also in [SETUP_PROMPT.md](SETUP_PROMPT.md)). It sets up a
+daily task with strict editorial rules: concrete facts only, never invent, one source link per
+item, short.
+
+<p align="center"><img src="docs/images/site-connect.png" alt="Connect your AI" width="720"></p>
+
+### Print it
+
+On a Raspberry Pi, Mac or Linux box next to the printer:
 
 ```bash
-.venv/bin/pytest -q            # the test suite
-./scripts/demo.sh              # server + MCP + webhook + printer agent + presence -> ./out (58mm, 80mm, A4, Letter)
-./scripts/test_postgrest.sh    # the storage tests against real Postgres + PostgREST (Supabase's stack)
+pipx install "dailytimes[escpos,mdns] @ git+https://github.com/prasanthsasikumar/dailytimes"
+dailytimes setup --server https://times.flowsxr.com --code ABCD-EFGH   # code from the Printers page
+dailytimes service    # prints the systemd/launchd file to start it at boot
 ```
 
-## Run it for real
+`setup` finds your printers (CUPS queues, Bonjour/IPP Everywhere, USB and serial receipt
+printers), suggests the right paper, prints a test page and writes the config. No sensor?
+The default trigger is a local URL, so an iOS Shortcut, an NFC tag or a smart button can say
+"I'm here".
 
-- **Your own server**: `docker compose up -d` with SQLite on a volume.
-- **Public service**: Vercel (the app) + Supabase (the database).
+## Any printer
 
-Both are step by step in [DEPLOY.md](DEPLOY.md); every setting is in [.env.example](.env.example).
-Privacy and security design: [PRIVACY.md](PRIVACY.md).
-
-## Use it
-
-1. **Sign up** on the website and fill in *Interests* (or write a sentence and press *Suggest
-   sources*). Choose full page or receipt.
-2. **Connect AI**: create your endpoint, add the MCP URL as a connector in Claude or ChatGPT
-   (or `claude mcp add --transport http dailytimes <url>`), and paste the generated prompt.
-   It's [SETUP_PROMPT.md](SETUP_PROMPT.md), pre-filled with your interests and paper size.
-3. **Printers**: get a pairing code, then on the machine next to the printer:
-
-   ```bash
-   pipx install "dailytimes[escpos,mdns]"          # add [gpio] on a Pi with a motion sensor
-   dailytimes setup --server https://your-server --code ABCD-EFGH
-   dailytimes agent                                 # or: dailytimes service, to run at boot
-   ```
-
-   `setup` finds printers (CUPS queues, Bonjour/IPP Everywhere, USB and serial receipt
-   printers), suggests a paper profile, prints a test page, and writes
-   `~/.config/dailytimes/agent.yaml`.
-
-Without the website (headless, one household): set `DAILYTIMES_ADMIN_TOKEN` and use
-`dailytimes register` to get a printer token and an endpoint directly.
-
-## Printers
+The server stores layout blocks, never pixels; each printer renders for its own paper. A new
+printer type is one adapter class plus one profile file.
 
 | profile | for | output |
 |---|---|---|
@@ -113,7 +160,7 @@ encoding (lp command, IPP request, ESC/POS bytes, MIME message) without touching
 implement `send(job)`, and either decorate it with `@register` or expose it in the
 `dailytimes.adapters` entry-point group of your own package. Add a profile YAML. Nothing else changes.
 
-## Presence
+### Presence: printing when someone walks up
 
 | backend | hardware | options |
 |---|---|---|
@@ -126,7 +173,63 @@ Rules: print once per day, on the first presence after `print_after`; at most on
 `cooldown_minutes`; if no brief has arrived, `retry` later (default) or after `fallback_after`
 print a `placeholder` slip / `skip` the day. The agent reports `printed`/`failed` to the relay.
 
-## The brief format
+## Privacy
+
+The Daily Times is built to know as little as possible:
+
+| we keep | we never see |
+|---|---|
+| your email (for sign-in links, no passwords) | your calendar, mail, chats or files: your AI reads those on its side |
+| your interests and a city for weather | your location, contacts or browsing |
+| editions for **30 days**, seen links for **60 days** | analytics, trackers, ads, third-party scripts |
+| tokens only as **SHA-256 hashes** | anything we'd sell: we sell nothing |
+
+Auto editions are built server-side from keyless public sources (Google News search, Hacker
+News, Reddit, arXiv, Yahoo Finance, Open-Meteo, your RSS feeds). Nothing is summarised by an
+LLM, so nothing can be made up. Full details: [PRIVACY.md](PRIVACY.md).
+
+## Run your own
+
+Everything above is this repository. Run the whole thing on your laptop, a Pi, a VPS, or
+Vercel + Supabase:
+
+```bash
+git clone https://github.com/prasanthsasikumar/dailytimes && cd dailytimes
+uv venv && uv pip install -e ".[dev]"
+DAILYTIMES_DEV=1 .venv/bin/dailytimes serve        # http://localhost:8787, sign-in link shown on screen
+```
+
+```bash
+.venv/bin/pytest -q             # 156 tests
+./scripts/demo.sh               # server + MCP + webhook + printer agent + presence -> ./out (58mm, 80mm, A4, Letter)
+./scripts/test_postgrest.sh     # storage tests against real Postgres + PostgREST (Supabase's stack)
+```
+
+Docker, Vercel + Supabase, email and every setting: [DEPLOY.md](DEPLOY.md) and [.env.example](.env.example).
+
+## FAQ
+
+**Do I need a printer?** No. The dashboard shows today's edition and opens it as a PDF. Many
+people start by printing the PDF on whatever they have.
+
+**Do I need an AI subscription?** No. The auto edition works on its own. Connecting an AI adds
+the parts only it can see: your calendar, inbox and judgement about what matters.
+
+**Which receipt printer should I buy?** Any ESC/POS printer works: 80 mm models with a cutter
+(Epson TM-T20, Xprinter XP-80) feel the most like a newspaper; 58 mm ones are cheaper. Run
+`dailytimes printers` to see what's detected.
+
+**Can it print at a fixed time instead of on presence?** Yes: the `simulated` presence backend
+with `every_seconds`, or a cron job calling `dailytimes presence`.
+
+**Two printers?** Pair both. Each prints the day's edition once.
+
+**Can my AI invent things?** The tool tells it not to, every item carries a source link, and
+the page shows it. The auto edition can't invent: it only quotes sources.
+
+## Developers
+
+### The brief format
 
 ```json
 {
@@ -150,7 +253,7 @@ are length limits per block, and at most 80 blocks and 6000 characters. The webh
 also accept plain text: `# Heading`, `## Headline`, `- bullet https://link`, `left | right`,
 `---`, `qr: URL caption`, `small: text`, anything else is a paragraph.
 
-## API
+### API
 
 | method | path | auth | |
 |---|---|---|---|
@@ -170,7 +273,7 @@ edition and report its own status. Both are stored hashed.
 Send responses include `status` (`queued`, `duplicate`, `empty_after_dedup`),
 `dropped_duplicates` (links already printed in the last 60 days) and `superseded`.
 
-## Code map
+### Code map
 
 ```
 src/dailytimes/
@@ -186,4 +289,19 @@ api/index.py           Vercel entry point          supabase/schema.sql   databas
 scripts/               demo.sh, test_postgrest.sh  deploy/               example agent config, unit files
 ```
 
-Decisions and progress are in [PROGRESS.md](PROGRESS.md).
+
+## Roadmap
+
+- [ ] OAuth for the MCP connector (today the private URL is the credential)
+- [ ] Publish to PyPI (`pipx install dailytimes`)
+- [ ] Bluetooth transport for cat printers (the encoder is done: [docs/cat-printers.md](docs/cat-printers.md))
+- [ ] E-ink displays as an output (the raster renderer already does any width)
+- [ ] PWG raster for IPP printers that don't take PDF
+- [ ] More sources for the auto edition: local events, transit, sports fixtures
+
+Ideas and pull requests welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Design decisions are
+logged in [PROGRESS.md](PROGRESS.md).
+
+## License
+
+MIT. Fonts: UnifrakturMaguntia and the PT family, under the SIL Open Font License.

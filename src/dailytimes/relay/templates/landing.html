@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block body %}
+<div class="hero">
+<div>
 <h1>A one-page newspaper about your day, printed when you walk up to your printer.</h1>
 <p class="lede">Tell us what you're into and get a fresh front page every morning from public sources. Connect Claude, ChatGPT or any AI agent and it writes you a personal edition with your calendar and inbox. It prints on any printer you own: receipt, laser, inkjet, or none at all.</p>
 
@@ -12,6 +14,9 @@
     </div>
     {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
   </form>
+</div>
+</div>
+<img class="sample" src="/static/sample-a4.png" alt="A sample front page of The Daily Times: calendar, inbox, news in your field, jobs, markets and a QR code" width="636" height="900">
 </div>
 
 <div class="cols">

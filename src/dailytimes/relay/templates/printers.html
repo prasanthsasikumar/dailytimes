@@ -7,7 +7,7 @@
 <div class="box">
   <p><b>Pairing code for “{{ name }}”: <span class="code" style="font-size:22px">{{ code }}</span></b> (valid 15 minutes, works once)</p>
   <p>On the computer next to the printer:</p>
-<pre>pipx install "dailytimes[escpos,mdns]"     # or: pip install ...
+<pre>pipx install "{{ settings.install_spec }}"
 dailytimes setup --server {{ settings.public_url }} --code {{ code }}</pre>
   <p class="small muted">Setup finds your printers, suggests the right paper profile, prints a test page and writes the config. Then run <code>dailytimes agent</code>, or install it as a service (instructions are printed at the end).</p>
 </div>

@@ -2,12 +2,13 @@
 {% block body %}
 <h1>{{ local_now.strftime("%A") }}'s edition</h1>
 {% if brief %}
+  {% set via = {"mcp": "via MCP", "webhook": "via webhook", "email": "via email"} %}
   <p class="muted">
-    {% if brief.source == "auto" %}Auto edition, built from your interests.{% else %}Sent by your AI ({{ brief.source }}).{% endif %}
-    {% if brief.title %}“{{ brief.title }}”.{% endif %}
-    {% if printed %}Printed on {% for name, r in printed %}{{ name }}{% if r.status != "printed" %} (failed: {{ r.detail }}){% endif %}{{ ", " if not loop.last }}{% endfor %}.
-    {% elif devices %}Not printed yet; it prints when someone walks up to a paired printer.
-    {% else %}No printer paired; download it below or <a href="/app/printers">pair one</a>.{% endif %}
+    {%- if brief.source == "auto" %}Auto edition, built from your interests.{% else %}Sent by your AI {{ via.get(brief.source, brief.source) }}.{% endif %}
+    {%- if brief.title %} “{{ brief.title }}”.{% endif %}
+    {%- if printed %} Printed on {% for name, r in printed %}{{ name }}{% if r.status != "printed" %} (failed: {{ r.detail }}){% endif %}{{ ", " if not loop.last }}{% endfor %}.
+    {%- elif devices %} Not printed yet; it prints when someone walks up to a paired printer.
+    {%- else %} No printer paired; download it below or <a href="/app/printers">pair one</a>.{% endif %}
   </p>
   <div class="row">
     <a class="btn" href="/app/edition.pdf?profile={{ 'letter' if user.timezone.startswith('America/') else 'a4' }}">Open PDF</a>

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
@@ -223,6 +224,7 @@ def create_app(db: Database | str | None = None, settings: Settings | None = Non
 
     attach_web(app)
     app.mount("/static/fonts", StaticFiles(directory=str(FONT_DIR)), name="fonts")
+    app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
     return app
 
 

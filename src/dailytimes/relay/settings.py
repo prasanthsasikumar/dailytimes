@@ -34,6 +34,8 @@ class Settings:
     smtp_user: str = ""
     smtp_password: str = ""
     llm_enabled: bool = False
+    repo_url: str = "https://github.com/prasanthsasikumar/dailytimes"
+    install_spec: str = "dailytimes[escpos,mdns] @ git+https://github.com/prasanthsasikumar/dailytimes"
     extra: dict = field(default_factory=dict)
 
     @property
@@ -63,6 +65,8 @@ class Settings:
             smtp_user=os.environ.get("SMTP_USER", ""),
             smtp_password=os.environ.get("SMTP_PASSWORD", ""),
             llm_enabled=bool(os.environ.get("ANTHROPIC_API_KEY")),
+            repo_url=os.environ.get("DAILYTIMES_REPO_URL", cls.repo_url),
+            install_spec=os.environ.get("DAILYTIMES_INSTALL_SPEC", cls.install_spec),
         )
         for k, v in overrides.items():
             setattr(s, k, v)
