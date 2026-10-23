@@ -47,7 +47,7 @@ mdns = ["zeroconf>=0.130"]
 gpio = ["gpiozero>=2.0"]
 ble = ["bleak>=0.22"]
 all = ["dailytimes[relay,escpos,mdns]"]
-dev = ["dailytimes[all,llm]", "pytest>=8", "pyjwt>=2"]
+dev = ["dailytimes[all,llm]", "pytest>=8", "pyjwt>=2", "numpy>=1.26"]
 
 [project.scripts]
 dailytimes = "dailytimes.cli:main"
