@@ -68,7 +68,7 @@ All milestones done. `pytest`: 156 passed; `scripts/test_postgrest.sh`: 32 passe
 ## Not done / next
 - Cat printer BLE transport (encoder done), BLE presence is a sketch, IMAP inbound transport is a stub.
 - No OAuth for MCP; the token-in-URL is the credential (rotatable, write-only). OAuth per the MCP auth spec is the next step for a public service.
-- Live at https://dailytimes-three.vercel.app (Vercel project `dailytimes`, region iad1; Supabase project `zcdtbwtbcyaxtkntjkjx`, us-east-1). Verified end to end on 2026-10-23 with a throwaway account: auto edition from live sources, PDF/PNG, endpoint over MCP and webhook, pairing, printer poll and report, export, delete. `times.flowsxr.com` is attached to the project but waits on a CNAME at NS1; `DAILYTIMES_PUBLIC_URL` points at the vercel.app address until then.
+- Live at https://times.flowsxr.com (also https://dailytimes-three.vercel.app) (Vercel project `dailytimes`, region iad1; Supabase project `zcdtbwtbcyaxtkntjkjx`, us-east-1). Verified end to end on 2026-10-23 with a throwaway account: auto edition from live sources, PDF/PNG, endpoint over MCP and webhook, pairing, printer poll and report, export, delete. DNS: `times CNAME f1db5ecea5d82c62.vercel-dns-017.com.` at NS1 (added 2026-10-23); `DAILYTIMES_PUBLIC_URL=https://times.flowsxr.com`.
 - From Vercel, arXiv sometimes times out (8 s read limit) and Reddit rate-limits (429); those sections are then simply left out.
 - Email delivery (Resend/SMTP) and the optional Claude suggestion are exercised only with fakes in tests.
 - No hardware was attached during development: CUPS, ESC/POS, IPP and SMTP are exercised in dry-run and against fakes, not real printers.
