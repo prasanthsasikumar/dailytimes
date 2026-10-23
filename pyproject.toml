@@ -16,10 +16,17 @@ dependencies = [
     "reportlab>=4",
     "qrcode>=7.4",
     "httpx>=0.27",
+    # the server (website, relay, MCP); core so that `pip install dailytimes` and hosts
+    # that install from pyproject.toml (Vercel) get a working server
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "mcp>=2.0",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
-relay = ["fastapi>=0.110", "uvicorn>=0.29", "mcp>=2.0", "jinja2>=3.1", "python-multipart>=0.0.9"]
+relay = []  # kept for compatibility: the server is part of the core install now
 llm = ["anthropic>=1.0"]
 escpos = ["python-escpos>=3.1"]
 mdns = ["zeroconf>=0.130"]

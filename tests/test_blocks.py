@@ -39,7 +39,7 @@ def test_sample_is_valid(sample_brief):
         {"type": "row", "left": "x"},
         {"type": "row", "left": "x", "right": "y" * 41},
         {"type": "qr"},
-        {"type": "qr", "url": "https://ex.com/" + "a" * 600},
+        {"type": "qr", "url": "https://ex.com/" + "a" * 2100},
         {"type": "divider", "text": "x"},
         {"type": "small", "text": ""},
     ],

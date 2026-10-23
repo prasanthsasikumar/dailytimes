@@ -194,3 +194,13 @@ def test_llm_suggestion_parses_and_falls_back(monkeypatch):
     Block.text = "not json"
     i, place, method = S.suggest("I'm into HCI")
     assert method == "keywords" and "human-computer interaction" in i.topics
+
+
+def test_one_bad_item_never_sinks_the_edition(monkeypatch):
+    monkeypatch.setattr(sources, "google_news", lambda t, region, n: [
+        sources.Item("good story", "https://ex.com/good"),
+        sources.Item("broken link", "javascript:alert(1)"),
+        sources.Item("very long link", "https://news.google.com/rss/articles/" + "A" * 900)])
+    b = build_auto_brief(Interests(topics=["ai"]), "page")
+    texts = [x.text for x in b.blocks if x.type == "bullet"]
+    assert texts == ["good story", "very long link"]  # long (but valid) links are fine; bad ones are dropped

@@ -11,11 +11,24 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
-from ..blocks import Brief, canonical_url
+from pydantic import TypeAdapter, ValidationError
+
+from ..blocks import Block, Brief, canonical_url
 from . import sources
 from .interests import Interests
 
 log = logging.getLogger("dailytimes.autobrief")
+_BLOCK = TypeAdapter(Block)
+
+
+def _valid(block: dict) -> bool:
+    """Public sources are untrusted input: one odd item is dropped, never the whole edition."""
+    try:
+        _BLOCK.validate_python(block)
+        return True
+    except ValidationError as e:
+        log.info("dropping item from auto edition: %s", e.errors()[0]["msg"])
+        return False
 
 # target number of linked items per edition, and the most any one source may contribute
 TARGET = {"page": 32, "slip": 12}
@@ -89,16 +102,19 @@ def build_auto_brief(interests: Interests, size: str = "page", seen: set[str] | 
     def section(title: str, items: list[sources.Item], source: str) -> None:
         if not items:
             return
+        bullets = [b for b in ({"type": "bullet", "text": it.text[:300], **({"url": it.url} if it.url else {})}
+                               for it in items) if _valid(b)]
+        if not bullets:
+            return
         credit(source)
         blocks.append({"type": "heading", "text": title[:1].upper() + title[1:]})
-        for it in items:
-            blocks.append({"type": "bullet", "text": it.text[:300], **({"url": it.url} if it.url else {})})
+        blocks.extend(bullets)
 
     rows = [r for r in [got.get("weather")] if r]
     if rows:
         credit("Open-Meteo")
         blocks.append({"type": "heading", "text": "Today"})
-        blocks += [{"type": "row", "left": r.left[:60], "right": r.right[:40]} for r in rows]
+        blocks += [b for b in ({"type": "row", "left": r.left[:60], "right": r.right[:40]} for r in rows) if _valid(b)]
 
     for t in interests.topics:
         section(t[:80], fresh(got.get(f"topic:{t}"), per["topic"]), "Google News")
@@ -116,7 +132,7 @@ def build_auto_brief(interests: Interests, size: str = "page", seen: set[str] | 
     if quotes:
         credit("Yahoo Finance")
         blocks.append({"type": "heading", "text": "Markets"})
-        blocks += [{"type": "row", "left": q.left, "right": q.right} for q in quotes]
+        blocks += [b for b in ({"type": "row", "left": q.left[:60], "right": q.right[:40]} for q in quotes) if _valid(b)]
 
     if not any(b["type"] in ("bullet", "row") for b in blocks):
         return None

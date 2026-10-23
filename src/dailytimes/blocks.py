@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator,
 
 MAX_BLOCKS = 80
 MAX_TOTAL_CHARS = 6000
-MAX_URL_LEN = 512
+MAX_URL_LEN = 2048  # news redirect links (Google News) routinely exceed 500
 
 _CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 _WS = re.compile(r"\s+")
