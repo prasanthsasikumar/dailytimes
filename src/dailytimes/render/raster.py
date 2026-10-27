@@ -57,14 +57,20 @@ def _text(d: ImageDraw.ImageDraw, op: TextOp, scale: float, mono: bool) -> None:
     font = _font(op.font, op.size * scale)
     fill = _fill(op.color, mono)
     x, y = op.x * scale, op.y * scale
-    if not op.tracking:
-        d.text((x, y), op.text, font=font, fill=fill, anchor=op.anchor + "s")
-        return
     total = fonts.width(op.text, op.font, op.size, op.tracking) * scale
     x -= {"l": 0, "m": total / 2, "r": total}[op.anchor]
-    for ch in op.text:
-        d.text((x, y), ch, font=font, fill=fill, anchor="ls")
-        x += (fonts.width(ch, op.font, op.size) + op.tracking) * scale
+    if op.tracking:
+        for ch in op.text:
+            d.text((x, y), ch, font=font, fill=fill, anchor="ls")
+            x += (fonts.width(ch, op.font, op.size) + op.tracking) * scale
+        return
+    # Place each word at its layout position: without libraqm, Pillow's hinted advances run
+    # ~3% wide at preview dpi, which would push long lines past the column edge.
+    space = fonts.width(" ", op.font, op.size) * scale
+    for word in op.text.split(" "):
+        if word:
+            d.text((x, y), word, font=font, fill=fill, anchor="ls")
+        x += fonts.width(word, op.font, op.size) * scale + space
 
 
 def _line(d: ImageDraw.ImageDraw, op: LineOp, scale: float, mono: bool) -> None:

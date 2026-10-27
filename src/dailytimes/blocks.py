@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator,
 
 MAX_BLOCKS = 80
 MAX_TOTAL_CHARS = 6000
+LEAD_MAX = 40  # a few bold words run in before an item, newspaper style
 MAX_URL_LEN = 2048  # news redirect links (Google News) routinely exceed 500
 
 _CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
@@ -65,16 +66,22 @@ class Heading(_Block):
 
 
 class Text(_Block):
-    """A short paragraph. Optional `url` is its single source link."""
+    """A short paragraph. Optional `lead` runs in bold before it; optional `url` is its single source link."""
 
     type: Literal["text"]
     text: str = Field(min_length=1, max_length=600)
+    lead: str | None = Field(default=None, max_length=LEAD_MAX)
     url: str | None = None
 
     @field_validator("text")
     @classmethod
     def _text(cls, v: str) -> str:
         return _clean_text(v, single_line=False)
+
+    @field_validator("lead")
+    @classmethod
+    def _lead(cls, v: str | None) -> str | None:
+        return None if v is None else _clean_text(v, single_line=True)
 
     @field_validator("url")
     @classmethod
@@ -83,16 +90,22 @@ class Text(_Block):
 
 
 class Bullet(_Block):
-    """One list item. Optional `url` is its single source link."""
+    """One list item. Optional `lead` runs in bold before it; optional `url` is its single source link."""
 
     type: Literal["bullet"]
     text: str = Field(min_length=1, max_length=300)
+    lead: str | None = Field(default=None, max_length=LEAD_MAX)
     url: str | None = None
 
     @field_validator("text")
     @classmethod
     def _text(cls, v: str) -> str:
         return _clean_text(v, single_line=False)
+
+    @field_validator("lead")
+    @classmethod
+    def _lead(cls, v: str | None) -> str | None:
+        return None if v is None else _clean_text(v, single_line=True)
 
     @field_validator("url")
     @classmethod
@@ -185,7 +198,7 @@ class Brief(BaseModel):
 
 def block_texts(b: _Block) -> list[str]:
     out = []
-    for name in ("text", "left", "right", "caption"):
+    for name in ("lead", "text", "left", "right", "caption"):
         v = getattr(b, name, None)
         if v:
             out.append(v)
@@ -221,6 +234,15 @@ def short_link(url: str, limit: int = 40) -> str:
     if len(host) >= limit - 2:
         return host[: limit - 1] + "…"
     return text[: limit - 1] + "…"
+
+
+def source_name(url: str) -> str:
+    """The publisher's domain, for the source line printed under an item (the full link is noise on paper)."""
+    p = urlsplit(url)
+    host = (p.hostname or "").lower().removeprefix("www.")
+    if host == "news.google.com" and p.path.startswith(("/rss/articles/", "/articles/")):
+        return "via Google News"
+    return host
 
 
 def fingerprint(b: _Block) -> str | None:

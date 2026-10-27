@@ -16,7 +16,7 @@ from typing import Callable
 import qrcode
 from qrcode.constants import ERROR_CORRECT_M
 
-from ..blocks import Brief, short_link
+from ..blocks import Brief, short_link, source_name
 from . import fonts
 from .profiles import Profile
 
@@ -198,6 +198,33 @@ def fit(text: str, st: TextStyle, width: float) -> str:
     return text.rstrip() + "…"
 
 
+def lead_text(lead: str) -> str:
+    """A run-in lead reads as a label: give it a colon unless it already ends in punctuation."""
+    return lead if lead[-1] in ".:;!?)-–—" else lead + ":"
+
+
+def wrap_runs(words: list[tuple[str, TextStyle]], width: float) -> list[list[tuple[str, TextStyle]]]:
+    """Greedy wrap of words that each carry their own style (a bold lead followed by body text)."""
+    lines: list[list[tuple[str, TextStyle]]] = []
+    cur: list[tuple[str, TextStyle]] = []
+    cur_w = 0.0
+    for word, st in words:
+        ww = st.width(word)
+        add = ww + (cur[-1][1].width(" ") if cur else 0)
+        if cur and cur_w + add > width:
+            lines.append(cur)
+            cur, cur_w, add = [], 0.0, ww
+        if not cur and ww > width:  # hard-break very long words (urls)
+            *full, word = wrap(word, st, width)
+            lines += [[(piece, st)] for piece in full]
+            add = st.width(word)
+        cur.append((word, st))
+        cur_w += add
+    if cur:
+        lines.append(cur)
+    return lines
+
+
 # ------------------------------------------------------------------ boxes
 
 @dataclass
@@ -213,13 +240,38 @@ def line_box(text: str, st: TextStyle, x: float = 0.0, anchor: str = "l") -> Box
     return Box(st.leading, [TextOp(x, st.baseline(), text, st.font, st.size, anchor, st.tracking, st.color)])
 
 
-def para(text: str, st: TextStyle, width: float, x: float = 0.0, align: str = "l") -> list[Box]:
+def para(text: str, st: TextStyle, width: float, x: float = 0.0, align: str = "l",
+         lead: str | None = None, lead_st: TextStyle | None = None) -> list[Box]:
     text = st.prep(text)
-    ax = {"l": x, "m": x + width / 2, "r": x + width}[align]
-    boxes = [line_box(line, st, ax, align) for line in wrap(text, st, width)]
+    lead = lead_st.prep(lead) if lead and lead_st else ""  # may sanitize down to nothing (emoji only)
+    if lead:
+        boxes = _lead_lines(lead_text(lead), lead_st, text, st, width, x)
+    else:
+        ax = {"l": x, "m": x + width / 2, "r": x + width}[align]
+        boxes = [line_box(line, st, ax, align) for line in wrap(text, st, width)]
     if len(boxes) > 1:  # no lone first line at a column foot, no lone last line at a column head
         boxes[0].keep_with_next = True
         boxes[-2].keep_with_next = True
+    return boxes
+
+
+def _lead_lines(lead: str, lead_st: TextStyle, text: str, st: TextStyle, width: float, x: float) -> list[Box]:
+    words = [(w, lead_st) for w in lead.split(" ")] + [(w, st) for w in text.split(" ") if w]
+    boxes = []
+    for line in wrap_runs(words, width):
+        ops: list[Op] = []
+        cx, run, run_st = x, [], line[0][1]
+        for word, wst in line + [("", None)]:  # sentinel flushes the last run
+            if wst is not run_st and run:
+                chunk = " ".join(run)
+                ops.append(TextOp(cx, st.baseline(), chunk, run_st.font, run_st.size, "l", run_st.tracking,
+                                  run_st.color))
+                cx += run_st.width(chunk) + run_st.width(" ")
+                run = []
+            if wst is not None:
+                run.append(word)
+                run_st = wst
+        boxes.append(Box(st.leading, ops))
     return boxes
 
 
@@ -293,17 +345,17 @@ class Composer:
         if url:
             boxes[-1].keep_with_next = True  # a source link never leaves its item
             st = self.t.link
-            text = fit(st.prep(short_link(url, 60)), st, self.w - x)
+            text = fit(st.prep(source_name(url)), st, self.w - x)
             boxes.append(line_box(text, st, x))
         return boxes
 
     def _text(self, b) -> list[Box]:
-        return self._with_link(para(b.text, self.t.body, self.w), b.url, 0)
+        return self._with_link(para(b.text, self.t.body, self.w, lead=b.lead, lead_st=self.t.bold), b.url, 0)
 
     def _bullet(self, b) -> list[Box]:
         t = self.t
         ind = t.bullet_indent
-        boxes = para(b.text, t.body, self.w - ind, x=ind)
+        boxes = para(b.text, t.body, self.w - ind, x=ind, lead=b.lead, lead_st=t.bold)
         sq = t.body.size * 0.3
         cy = t.body.baseline() - t.body.size * 0.33
         boxes[0].ops.append(RectOp(ind * 0.22, cy - sq / 2, sq, sq))

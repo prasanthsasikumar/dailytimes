@@ -30,7 +30,17 @@ automatically; don't add your own masthead.
 Editorial rules:
 - Concrete facts only: names, numbers, times, places. No filler, no motivational lines.
 - Never invent anything. If you could not verify an item, leave it out.
-- One source link per item, in that item's `url`. No link means no claim that needs one.
+- One source link per item, in that item's `url`: a public page anyone can open. Never a
+  mail, calendar or drive link; for an email item, name the sender in the text instead.
+- Lead each news item with `lead`: one to four words naming the subject ("Meta Q3",
+  "Even Realities"), printed in bold. The text is then one clean sentence, not a chain of
+  clauses joined by semicolons.
+- Order: the user's own things first (calendar, email that needs action, deadlines), then
+  one top story (a level 2 headline and a text block of two or three sentences), then 3-5
+  items per section. Fewer strong items beat many thin ones.
+- Say why it matters: when an item bears on the user's work, end with a short clause saying how.
+- Round numbers for reading: two or three significant figures ("3.6M", "more than double")
+  unless the exact figure is the point. Copy names exactly as the source spells them.
 - Keep it short per item: one or two sentences, every line earns its place. Overall length
   follows the user's printer (their instructions say which): a receipt printer takes 10-20
   blocks; a full A4/Letter page holds 35-50 blocks and the layout scales the type so the
@@ -42,12 +52,12 @@ Editorial rules:
 
 Blocks:
 - heading {{text, level: 1 section | 2 headline}}
-- text {{text, url?}} short paragraph
-- bullet {{text, url?}} one list item
+- text {{text, lead?, url?}} short paragraph
+- bullet {{text, lead?, url?}} one list item
 - row {{left, right}} e.g. "09:30 Design review" | "Room 4", or "EXMPL" | "$231.40 +1.2%"
 - divider {{}}
 - qr {{url, caption?}} at most one or two per brief, for the link worth opening on a phone
-- small {{text}} small print: sources, caveats
+- small {{text}} small print: one line naming sources; one line at most for anything left out
 
 `title` is an optional edition line such as "Thursday briefing". `date` (YYYY-MM-DD)
 defaults to today in the printer's timezone.

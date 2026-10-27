@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from dailytimes.blocks import Brief
 from dailytimes.render import list_profiles, load_profile, render
 from dailytimes.render import fonts
+from dailytimes.render import raster
 from dailytimes.render.layout import NAMEPLATE, LineOp, QROp, TextOp, layout, wrap, theme_for
 from dailytimes.render.profiles import MM, Profile
 
@@ -113,8 +114,8 @@ def test_nameplate_style_differs(sample_brief):
 def test_links_printed_as_short_text_and_qr_rendered(sample_brief):
     doc = layout(sample_brief, load_profile("thermal-80mm"), DAY)
     t = texts(doc)
-    assert "conf.example.org/2027/deadlines" in t
-    assert any(s.startswith("careers.example.org/hci") for s in t)  # tracking params dropped
+    assert "conf.example.org" in t  # source lines name the publisher, not the path
+    assert "careers.example.org" in t
     qrs = [op for op in doc.pages[0].ops if isinstance(op, QROp)]
     assert len(qrs) == 1 and len(qrs[0].matrix) >= 21
 
@@ -209,3 +210,52 @@ def test_light_brief_scales_up_but_capped(sample_brief):
     plain = layout(sample_brief, prof.model_copy(update={"fill_page": False}), DAY)
     filled = layout(sample_brief, prof, DAY)
     assert body(plain) < body(filled) <= body(plain) * 1.3 + 0.01
+
+
+def lead_brief(n=24) -> Brief:
+    blocks = [{"type": "heading", "text": "Top story"}]
+    blocks += [{"type": "bullet" if i % 2 else "text", "lead": f"Lead number {i}",
+                "text": f"Item {i}: Reality Labs revenue $443M, down 6% on lower Quest sales; Zuckerberg says "
+                        "new devices ship only with major breakthroughs.", "url": f"https://ex.com/{i}"}
+               for i in range(n)]
+    return Brief.model_validate({"blocks": blocks})
+
+
+def test_lead_runs_in_bold_and_stays_in_column():
+    prof = load_profile("a4")
+    doc = layout(lead_brief(), prof, DAY)
+    ops = [op for op in doc.pages[0].ops if isinstance(op, TextOp)]
+    lead = next(op for op in ops if op.text.startswith("Lead number 0"))
+    assert lead.font == "serif-bold" and lead.text == "Lead number 0:"
+    body = next(op for op in ops if op.text.startswith("Item 0:"))
+    assert body.font == "serif" and body.y == lead.y and body.x > lead.x  # same line, after the lead
+    rules = sorted(op.x1 for op in doc.pages[0].ops if isinstance(op, LineOp) and op.x1 == op.x2)
+    for op in ops:
+        if op.anchor == "l" and 100 < op.y < 780:
+            edge = next((x for x in rules if x > op.x), prof.page_width_pt)
+            assert op.x + fonts.width(op.text, op.font, op.size, op.tracking) < edge, op.text
+
+
+def test_lead_with_punctuation_is_kept_and_emoji_only_lead_is_dropped():
+    b = Brief.model_validate({"blocks": [
+        {"type": "bullet", "lead": "Meta Q3.", "text": "Revenue down."},
+        {"type": "bullet", "lead": "\U0001F680", "text": "Launch today."},
+    ]})
+    t = texts(layout(b, load_profile("thermal-80mm"), DAY))
+    assert "Meta Q3." in t and "Launch today." in t
+
+
+def test_raster_text_stays_left_of_gutter_without_raqm(monkeypatch):
+    """Pillow's basic layout engine (no libraqm, as on the server) runs ~3% wide at preview dpi."""
+    from PIL import ImageFont
+    monkeypatch.setattr(raster, "_font", lambda key, px: ImageFont.truetype(
+        str(fonts.path(key)), px, layout_engine=ImageFont.Layout.BASIC))
+    prof = load_profile("a4").model_copy(update={"dpi": 110})
+    doc = layout(lead_brief(), prof, DAY)
+    img = raster.render_raster(doc)[0].convert("L")
+    rule = next(op for op in doc.pages[0].ops if isinstance(op, LineOp) and op.x1 == op.x2)
+    sc = prof.dpi / 72
+    rx, px = round(rule.x1 * sc), img.load()
+    ink = [(x, y) for y in range(round(rule.y1 * sc) + 5, round(rule.y2 * sc) - 5)
+           for x in range(rx - 6, rx - 1) if px[x, y] < 128]
+    assert not ink

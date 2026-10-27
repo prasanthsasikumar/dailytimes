@@ -239,14 +239,18 @@ the page shows it. The auto edition can't invent: it only quotes sources.
     {"type": "row", "left": "09:30 Design review", "right": "Room 4"},
     {"type": "heading", "text": "Your field"},
     {"type": "heading", "level": 2, "text": "Lead story headline"},
-    {"type": "text", "text": "One or two sentences.", "url": "https://source.example/story"},
-    {"type": "bullet", "text": "One item.", "url": "https://source.example/item"},
+    {"type": "text", "lead": "Subject", "text": "Two or three sentences.", "url": "https://source.example/story"},
+    {"type": "bullet", "lead": "Subject", "text": "One item.", "url": "https://source.example/item"},
     {"type": "divider"},
     {"type": "qr", "url": "https://source.example/story", "caption": "Read more"},
     {"type": "small", "text": "Sources: calendar, arXiv."}
   ]
 }
 ```
+
+`lead` (optional, up to 40 characters) prints in bold before the item's text, newspaper style;
+a colon is added unless it ends in punctuation. Under each linked item only the publisher's
+domain is printed; the full link goes in a `qr` block.
 
 Strict validation: unknown fields or types are rejected, URLs must be absolute http(s), there
 are length limits per block, and at most 80 blocks and 6000 characters. The webhook and email

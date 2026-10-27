@@ -7,7 +7,9 @@ from dailytimes.blocks import (
     canonical_url,
     fingerprint,
     parse_plaintext,
+    block_texts,
     short_link,
+    source_name,
 )
 
 
@@ -107,3 +109,17 @@ def test_parse_plaintext():
     assert b.blocks[5].text == "Paragraph one continues."
     assert b.blocks[6].caption == "Scan me"
     assert b.title == "Mail"
+
+
+def test_lead_is_optional_single_line_and_counted():
+    b = Brief.model_validate({"blocks": [{"type": "bullet", "lead": "  Meta  Q3 ", "text": "Revenue down."}]})
+    assert b.blocks[0].lead == "Meta Q3"
+    for bad in ("two\nlines", "x" * 41):
+        with pytest.raises(ValidationError):
+            Brief.model_validate({"blocks": [{"type": "text", "lead": bad, "text": "Body."}]})
+    assert block_texts(b.blocks[0]) == ["Meta Q3", "Revenue down."]
+
+
+def test_source_name_is_the_domain():
+    assert source_name("https://www.roadtovr.com/meta-declining-quest-sales/") == "roadtovr.com"
+    assert source_name("https://news.google.com/rss/articles/CBMiABC?oc=5") == "via Google News"

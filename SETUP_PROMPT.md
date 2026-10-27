@@ -62,8 +62,16 @@ Editorial rules (these matter more than coverage):
   motivational lines, no summaries of what you did.
 - Never invent anything. If you couldn't verify something today, leave it out. An empty
   section is dropped entirely, not padded.
-- Every news, job or community item gets exactly one source link (its `url`), the page you
-  actually read. Calendar, email and market rows don't need links.
+- Every news, job or community item gets exactly one source link (its `url`), the public page
+  you actually read. Never a mail, calendar or drive link; for an email, name the sender in
+  the text. Calendar, email and market rows don't need links.
+- Give each news item a `lead` of one to four words naming its subject ("Meta Q3",
+  "Even Realities"); it prints in bold. The text is then one clean sentence, not a chain of
+  clauses joined by semicolons.
+- When an item bears on my work, end with a short clause saying how.
+- Round numbers to two or three significant figures ("3.6M", "more than double") unless the
+  exact figure is the point. Copy product and people's names exactly as the source spells them.
+- 3-5 items per section. Fewer strong items beat many thin ones.
 - Short items: one sentence each where possible, two at most (the lead story may take
   three or four). Fill the length set above with more items, not longer ones.
 - Plain text. No markdown, no emoji.
@@ -74,13 +82,14 @@ Then call the `print_brief` tool once with:
   - `heading` (level 1) per section: "Today", "Inbox", "Your field", "Jobs", "Communities", "Markets".
   - `row` for calendar entries (left "09:30 Design review", right "Room 4"), weather,
     deadlines and market prices (left "EXMPL", right "$231.40 +1.2%").
-  - `bullet` with `url` for news, jobs and community posts; `text` for the one or two items
+  - `bullet` with `url` and `lead` for news, jobs and community posts; `text` for the one or two items
     that need a sentence of context, with `url` if it's a claim from the web.
-  - `heading` level 2 only for a single lead story if there is a clearly most important item.
+  - One top story right after my own sections: a `heading` level 2 headline, then a `text`
+    block of two or three sentences with a `lead` and `url`.
   - `divider` between sections is optional.
   - At most one `qr` block, for the single link most worth opening on my phone, with a caption.
   - Finish with one `small` block naming the sources you used (e.g. "Calendar, Gmail, arXiv,
-    Reddit, Yahoo Finance").
+    Reddit, Yahoo Finance"), and at most one line on anything you left out.
 
 If `print_brief` returns a validation error, fix exactly what it complains about and call it
 again once. If it reports `dropped_duplicates`, that's fine: I already saw those items. Reply
