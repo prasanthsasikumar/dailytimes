@@ -63,7 +63,7 @@
 - **Retention**: editions and receipts 30 days, seen-link history 60 days, codes/links minutes; purged at most hourly on writes and by the daily cron.
 
 ## Status
-All milestones done. `pytest`: 156 passed; `scripts/test_postgrest.sh`: 32 passed (store suite on SQLite and on Postgres+PostgREST). `scripts/demo.sh` produces `out/brief-thermal-58mm.png`, `brief-thermal-80mm.png`, `brief-a4.pdf`, `brief-letter.pdf`, all reviewed visually; QR codes in all four decode correctly (OpenCV).
+All milestones done. `pytest`: 161 passed; `scripts/test_postgrest.sh`: 32 passed (store suite on SQLite and on Postgres+PostgREST). `scripts/demo.sh` produces `out/brief-thermal-58mm.png`, `brief-thermal-80mm.png`, `brief-a4.pdf`, `brief-letter.pdf`, all reviewed visually; QR codes in all four decode correctly (OpenCV).
 
 ## Not done / next
 - Cat printer BLE transport (encoder done), BLE presence is a sketch, IMAP inbound transport is a stub.
