@@ -1,5 +1,6 @@
 """The website end to end: sign-in, interests, endpoint, MCP/webhook, pairing, printing, export, delete."""
 
+import json
 import re
 
 import pytest
@@ -62,9 +63,10 @@ def test_landing_and_privacy_pages(client):
 
 def test_sign_up_flow_and_single_use_link(client):
     r, token = sign_up(client)
-    assert r.headers["location"] == "/app/interests?welcome=1"
+    assert r.headers["location"] == "/app/connect?welcome=1"
     user = client.app_state.store.user_by_email("reader@example.com")
     assert user.timezone == "Pacific/Auckland"
+    assert client.app_state.store.has_send_token(user)  # the endpoint exists from sign-up
     # link is single use
     r = client.post("/auth/verify", data={"token": token}, follow_redirects=False)
     assert r.status_code == 400 and "expired" in r.text
@@ -95,7 +97,7 @@ def test_interests_suggest_and_save(client):
     r = client.post("/app/interests/suggest", data={"csrf": csrf, "about": "I do HCI research and follow r/HCI, $AAPL"})
     assert "human-computer interaction" in r.text and "HCI" in r.text and "AAPL" in r.text
     r = save_interests(client, csrf, welcome="1")
-    assert r.status_code == 303 and r.headers["location"] == "/app/connect?welcome=1"
+    assert r.status_code == 303 and r.headers["location"] == "/app/printers"
     user = client.app_state.store.user_by_email("reader@example.com")
     assert user.interests["tickers"] == ["AAPL"] and user.interests["region"] == "NZ"
     r = save_interests(client, csrf, subreddits="not a sub!")
@@ -120,11 +122,15 @@ def test_dashboard_builds_auto_edition_and_serves_files(client):
 
 def test_endpoint_mcp_webhook_and_newest_wins(client):
     sign_up(client)
-    csrf = csrf_of(client.get("/app/connect").text)
-    r = client.post("/app/connect", data={"csrf": csrf})
+    r = client.get("/app/connect?welcome=1")
+    csrf = csrf_of(r.text)
     mcp = re.search(r'value="(http://testserver/u/[^"]+/mcp)"', r.text).group(1)
     webhook = re.search(r'value="(http://testserver/u/[^"]+/brief)"', r.text).group(1)
-    assert "Then paste this prompt" in r.text and "print_brief" in r.text
+    assert "Paste this prompt" in r.text and "print_brief" in r.text and "set_interests" in r.text
+    # the real link is in the commands, and it's the same on every visit
+    assert f'claude mcp add --scope user --transport http dailytimes "{mcp}"' in r.text
+    assert f'value="{mcp}"' in client.get("/app/connect").text
+    assert client.get("/app/connect/status").json() == {"interests_by_ai": False, "edition_by_ai": False}
 
     res = client.post(mcp, headers=MCP_HEADERS, json={"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {
         "name": "print_brief", "arguments": {"blocks": [{"type": "text", "text": "from mcp"}]}}}).json()["result"]
@@ -132,9 +138,12 @@ def test_endpoint_mcp_webhook_and_newest_wins(client):
     r = client.post(webhook, content="# Hi\n- webhook item https://ex.com/w", headers={"content-type": "text/plain"})
     assert r.status_code == 202 and r.json()["superseded"] == 1
     assert "Sent by your AI via webhook." in client.get("/app").text
+    assert client.get("/app/connect/status").json()["edition_by_ai"] is True
 
-    # rotating the endpoint kills the old one
-    client.post("/app/connect", data={"csrf": csrf})
+    # rotating the endpoint kills the old one and shows the new one
+    r = client.post("/app/connect", data={"csrf": csrf})
+    new_mcp = re.search(r'value="(http://testserver/u/[^"]+/mcp)"', r.text).group(1)
+    assert new_mcp != mcp and "The old one has stopped working" in r.text
     assert client.post(webhook, content="- x", headers={"content-type": "text/plain"}).status_code == 401
     res = client.post(mcp, headers=MCP_HEADERS, json={"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {
         "name": "print_brief", "arguments": {"blocks": [{"type": "text", "text": "x"}]}}}).json()["result"]
@@ -215,3 +224,47 @@ def test_session_cookie_tamper_and_expiry():
     assert sessions.read("s", sessions.make("s", "u", 0, now=0)) is None  # expired
     assert sessions.check_csrf("s", "u", 1, sessions.csrf_token("s", "u", 1))
     assert not sessions.check_csrf("s", "u", 2, sessions.csrf_token("s", "u", 1))
+
+
+def test_ai_fills_interests_over_mcp(client, monkeypatch):
+    monkeypatch.setattr("dailytimes.relay.mcp_server.geocode", lambda name: ("Auckland", -36.85, 174.76))
+    sign_up(client)
+    mcp = re.search(r'value="(http://testserver/u/[^"]+/mcp)"', client.get("/app/connect").text).group(1)
+
+    def call(**args):
+        return client.post(mcp, headers=MCP_HEADERS, json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                           "params": {"name": "set_interests", "arguments": args}}).json()["result"]
+
+    res = call(about="HCI researcher in Auckland", topics=["human-computer interaction"], subreddits=["r/HCI"],
+               tickers=["$AAPL"], city="Auckland", region="nz")
+    assert res["isError"] is False
+    out = json.loads(res["content"][0]["text"])
+    assert out["saved"]["location"] == "Auckland" and out["review_url"] == "http://testserver/app/interests"
+    user = client.app_state.store.user_by_email("reader@example.com")
+    assert user.interests["subreddits"] == ["HCI"] and user.interests["region"] == "NZ"
+    assert user.interests["set_by"] == "ai"
+    assert client.get("/app/connect/status").json()["interests_by_ai"] is True
+    assert "Your AI filled these in" in client.get("/app/interests").text
+
+    # later calls only replace what they pass; bad values come back as a tool error
+    assert call(hacker_news=True)["isError"] is False
+    user = client.app_state.store.user_by_email("reader@example.com")
+    assert user.interests["hacker_news"] and user.interests["tickers"] == ["AAPL"]
+    bad = call(subreddits=["not a sub!"])
+    assert bad["isError"] and "invalid interests" in bad["content"][0]["text"]
+
+    # saving on the website makes them the user's own
+    save_interests(client, csrf_of(client.get("/app/interests").text))
+    assert client.get("/app/connect/status").json()["interests_by_ai"] is False
+
+
+def test_legacy_random_endpoint_can_be_replaced(client):
+    sign_up(client)
+    store = client.app_state.store
+    old = store.rotate_send_token(store.user_by_email("reader@example.com"))  # random, can't be shown again
+    r = client.get("/app/connect")
+    assert "/mcp" not in re.sub(r"https://claude.ai[^\"]*", "", r.text.split("Add it to your assistant")[0])
+    assert "Show me a new link" in r.text
+    r = client.post("/app/connect", data={"csrf": csrf_of(r.text)})
+    assert re.search(r'value="http://testserver/u/dts_[^"]+/mcp"', r.text)
+    assert store.user_for_send_token(old) is None

@@ -115,7 +115,8 @@ def attach_web(app: FastAPI) -> None:
         new = user is None
         if new:
             user = store.create_user(email, tz if tz in TIMEZONES else "UTC")
-        return sign_in(user, "/app/interests?welcome=1" if new else "/app")
+            store.new_send_token(user, settings.secret)
+        return sign_in(user, "/app/connect?welcome=1" if new else "/app")
 
     @app.post("/logout")
     async def logout(request: Request):
@@ -212,6 +213,7 @@ def attach_web(app: FastAPI) -> None:
                 "hacker_news": form.get("hacker_news") == "on",
                 "location": location.model_dump() if location else None,
                 "region": (form.get("region") or "US").upper()[:2],
+                "set_by": "you",
             })
         except ValidationError as e:
             msgs = "; ".join(err["msg"].removeprefix("Value error, ") for err in e.errors())
@@ -225,23 +227,36 @@ def attach_web(app: FastAPI) -> None:
             return page(request, "interests.html", user, i=interests, error=str(e), timezones=TIMEZONES, status=422)
         if error:
             return page(request, "interests.html", user, i=interests, error=error, timezones=TIMEZONES)
-        return RedirectResponse("/app/connect?welcome=1" if form.get("welcome") == "1" else "/app?saved=1",
+        return RedirectResponse("/app/printers" if form.get("welcome") == "1" else "/app?saved=1",
                                 status_code=303)
 
     # ------------------------------------------------------------ connect AI agents
 
     @app.get("/app/connect", response_class=HTMLResponse)
-    def connect_page(request: Request, welcome: int = 0):
+    def connect_page(request: Request, welcome: int = 0, rotated: int = 0):
         user = need_user(request)
-        return page(request, "connect.html", user, has_endpoint=store.has_send_token(user), new=None,
-                    welcome=welcome, prompt=setup_prompt(user))
+        token = store.send_token(user, settings.secret)
+        if token is None and not store.has_send_token(user):
+            token = store.new_send_token(user, settings.secret)
+        return page(request, "connect.html", user, ep=app.state.endpoints(token) if token else None,
+                    welcome=welcome, rotated=rotated, prompt=setup_prompt(user),
+                    email_enabled=bool(settings.inbound_secret), **connect_status(user))
 
-    @app.post("/app/connect", response_class=HTMLResponse)
+    @app.post("/app/connect")
     async def connect_rotate(request: Request):
         user, _ = await need_post(request)
-        token = store.rotate_send_token(user)
-        return page(request, "connect.html", user, has_endpoint=True, new=app.state.endpoints(token),
-                    prompt=setup_prompt(user))
+        store.new_send_token(user, settings.secret)
+        return RedirectResponse("/app/connect?rotated=1", status_code=303)
+
+    @app.get("/app/connect/status")
+    def connect_status_json(request: Request):
+        return JSONResponse(connect_status(need_user(request)), headers={"Cache-Control": "no-store"})
+
+    def connect_status(user: User) -> dict:
+        """What the connect page waits for: the AI filling in interests, and its first edition."""
+        brief = store.todays_brief(user)
+        return {"interests_by_ai": interests_of(user).set_by == "ai",
+                "edition_by_ai": bool(brief and brief["source"] != "auto")}
 
     def setup_prompt(user: User) -> str:
         i = interests_of(user)

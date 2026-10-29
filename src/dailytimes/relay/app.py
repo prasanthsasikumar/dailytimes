@@ -216,7 +216,7 @@ def create_app(db: Database | str | None = None, settings: Settings | None = Non
 
     # ---------------------------------------------------------- MCP + website
 
-    mcp = mcp_asgi(store)
+    mcp = mcp_asgi(store, f"{settings.public_url}/app/interests")
     app.router.routes.append(Route("/mcp", endpoint=mcp, methods=["GET", "POST", "DELETE"]))
     app.router.routes.append(Route("/u/{token}/mcp", endpoint=mcp, methods=["GET", "POST", "DELETE"]))
 

@@ -14,8 +14,10 @@ Model
 
 from __future__ import annotations
 
+import base64
 import datetime as dt
 import hashlib
+import hmac
 import json
 import secrets
 import uuid
@@ -30,10 +32,18 @@ RETENTION_DAYS = 30
 LOGIN_MINUTES = 15
 PAIRING_MINUTES = 15
 CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # no 0/O/1/I/L
+SEND_GENERATIONS = 1000  # how many times the website can rotate a user's endpoint
 
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def derive_send_token(secret: str, user_id: str, generation: int) -> str:
+    """The website's endpoint tokens are derived from the server secret, so the dashboard can
+    show the endpoint again while the database still holds only its hash."""
+    mac = hmac.new(secret.encode(), f"send:{user_id}:{generation}".encode(), hashlib.sha256).digest()
+    return "dts_" + base64.urlsafe_b64encode(mac[:24]).decode()
 
 
 def _utcnow() -> dt.datetime:
@@ -156,6 +166,28 @@ class Store:
 
     def rotate_send_token(self, user: User) -> str:
         token = "dts_" + secrets.token_urlsafe(24)
+        self.db.update("dt_users", {"send_token_hash": hash_token(token)}, eq={"id": user.id})
+        return token
+
+    def _send_generation(self, user: User, secret: str) -> int | None:
+        r = self.db.one("dt_users", id=user.id)
+        current = r and r["send_token_hash"]
+        if not current:
+            return None
+        for n in range(SEND_GENERATIONS):
+            if hash_token(derive_send_token(secret, user.id, n)) == current:
+                return n
+        return -1  # a random token (CLI, or made before derived tokens): can't be shown again
+
+    def send_token(self, user: User, secret: str) -> str | None:
+        """The user's current endpoint token, if it was derived from `secret`."""
+        n = self._send_generation(user, secret)
+        return derive_send_token(secret, user.id, n) if n is not None and n >= 0 else None
+
+    def new_send_token(self, user: User, secret: str) -> str:
+        """Make (or replace) the user's endpoint with the next derived token."""
+        n = self._send_generation(user, secret)
+        token = derive_send_token(secret, user.id, ((n if n is not None else -1) + 1) % SEND_GENERATIONS)
         self.db.update("dt_users", {"send_token_hash": hash_token(token)}, eq={"id": user.id})
         return token
 

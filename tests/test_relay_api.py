@@ -87,7 +87,7 @@ def test_mcp_lists_tool_with_editorial_rules(client, device):
     r = client.post("/mcp", headers={**MCP_HEADERS, **device["s"]},
                     json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}})
     tools = r.json()["result"]["tools"]
-    assert [t["name"] for t in tools] == ["print_brief"]
+    assert [t["name"] for t in tools] == ["print_brief", "set_interests"]
     desc = tools[0]["description"]
     for rule in ("Concrete facts only", "Never invent", "One source link per item", "Keep it short"):
         assert rule in desc

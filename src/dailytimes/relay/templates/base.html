@@ -59,6 +59,15 @@ button.danger { background: var(--accent); border-color: var(--accent); }
 code, .code { font: 14px/1.45 ui-monospace, "SF Mono", Menlo, monospace; background: var(--soft); padding: 2px 5px; overflow-wrap: anywhere; }
 pre { font: 13px/1.5 ui-monospace, "SF Mono", Menlo, monospace; background: var(--soft); padding: 12px; overflow-x: auto; white-space: pre-wrap; }
 .copy { display: flex; gap: 8px; } .copy input { font: 14px ui-monospace, Menlo, monospace; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.tabs .tab { background: transparent; color: var(--ink); border: 1px solid var(--rule); padding: 9px 12px; font-size: 13px; }
+.tabs .tab.on { background: var(--ink); color: var(--paper); }
+.panel h3 { margin-top: 18px; }
+.status { list-style: none; padding: 0; } .status li { padding: 8px 0 8px 30px; position: relative; border-bottom: 1px solid var(--soft); }
+.status li::before { content: "…"; position: absolute; left: 4px; color: var(--muted); }
+.status li.ok::before { content: "✓"; color: var(--ink); font-weight: 700; }
+.status li .done, .status li.ok .wait { display: none; } .status li.ok .done { display: inline; }
+.status li .wait { color: var(--muted); }
 .preview { width: 100%; border: 1px solid var(--soft); box-shadow: 0 2px 14px rgba(0,0,0,.12); background: #fff; }
 .slip { max-width: 300px; }
 table { width: 100%; border-collapse: collapse; } td, th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--soft); font-size: 15px; }

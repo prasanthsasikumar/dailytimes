@@ -30,6 +30,7 @@ class Interests(BaseModel):
     hacker_news: bool = False
     location: Location | None = None
     region: str = Field(default="US", pattern=r"^[A-Z]{2}$")  # news edition (Google News gl=)
+    set_by: str = Field(default="", pattern=r"^(|you|ai)$")  # who last saved them: the website or an AI over MCP
 
     @field_validator("topics")
     @classmethod

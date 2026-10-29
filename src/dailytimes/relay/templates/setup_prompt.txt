@@ -1,5 +1,12 @@
-Please set up a recurring task called "The Daily Times" that runs every day at 06:00 in my
-timezone ({{ timezone }}). Run it once right now as a test, then keep the schedule.
+I've connected The Daily Times, which prints a one-page morning paper for me.
+
+First, call its `set_interests` tool once with what you know about me (my work, what I follow,
+my city), so the paper it builds from public news on days you don't send one is about me too.
+I'll check them on the website.
+
+Then set up a recurring task called "The Daily Times" that runs every day at 06:00 in my
+timezone ({{ timezone }}). Run it once right now as a test, then keep the schedule. If you
+can't schedule tasks, say so and just do today's edition now.
 
 My printer: {{ size }}.
 

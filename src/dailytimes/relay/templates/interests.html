@@ -1,10 +1,14 @@
 {% extends "base.html" %}
 {% block body %}
-<h1>{{ "Welcome. What are you into?" if welcome else "Your interests" }}</h1>
+<h1>{{ "What are you into?" if welcome else "Your interests" }}</h1>
 <p class="lede">These drive your auto edition: the front page we build from public sources when no AI has sent you one.</p>
 {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
-{% if suggested %}<p class="notice">We filled in the fields below from your description{% if suggested == "llm" %} using Claude{% else %} by keyword matching{% endif %}. Check them, then save.</p>{% endif %}
+{% if suggested %}<p class="notice">We filled in the fields below from your description{% if suggested == "llm" %} using Claude{% else %} by keyword matching{% endif %}. Check them, then save.</p>
+{% elif i.set_by == "ai" %}<p class="notice">Your AI filled these in from what it knows about you. Change anything you like, then save.</p>
+{% elif i.is_empty() and not welcome %}<p class="notice"><a href="/app/connect">Connect your AI</a> and it fills these in for you. Or describe yourself below, or fill in the fields.</p>{% endif %}
 
+<details{{ " open" if welcome or suggested }}>
+<summary class="small">Describe yourself and we'll suggest sources</summary>
 <form method="post" action="/app/interests/suggest">
   <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="welcome" value="{{ welcome }}">
   <label for="about">In your own words <span class="hint">Your work, hobbies, what you follow, where you live.</span></label>
@@ -12,6 +16,7 @@
   <div class="row"><button class="ghost">Suggest sources</button>
   <span class="muted small">{% if settings.llm_enabled %}This server uses Claude to read your description; the text goes to Anthropic for that one request.{% else %}Matched on this server by keywords; the text goes nowhere else.{% endif %}</span></div>
 </form>
+</details>
 
 <form method="post" action="/app/interests">
   <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="welcome" value="{{ welcome }}">

@@ -1,4 +1,5 @@
-"""MCP server (streamable HTTP) exposing one tool: `print_brief`.
+"""MCP server (streamable HTTP) exposing two tools: `print_brief` (today's edition) and
+`set_interests` (what the auto edition covers, filled in by the AI at setup).
 
 Auth: the user's write-only send token, in the URL path (`/u/<token>/mcp`, the
 "unique endpoint" shown on the dashboard), as `Authorization: Bearer <token>`, or
@@ -16,9 +17,13 @@ from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import ValidationError
 
+from ..autobrief import Interests, Location
+from ..autobrief.fetch import FetchError
+from ..autobrief.sources import geocode
 from ..blocks import MAX_BLOCKS, MAX_TOTAL_CHARS, Block, Brief
 from starlette.types import Receive, Scope, Send
 
+from .autoedition import interests_of
 from .store import Store, StoreError
 
 TOOL_DESCRIPTION = f"""\
@@ -64,11 +69,33 @@ defaults to today in the printer's timezone.
 """
 
 
-def build_mcp(store: Store) -> MCPServer:
+INTERESTS_DESCRIPTION = """\
+Save what the user's auto edition should cover: the paper The Daily Times builds from
+public sources on mornings when no AI sends a brief. Call it once when the user connects
+The Daily Times, filling it from what you know about them (memory, past conversations,
+connected apps), and again only when they ask to change it; not on the daily run. The user
+reviews and edits the result on the website.
+
+Every argument is optional; the ones you pass replace what is saved, the rest stay.
+- about: two or three sentences on who they are and what they follow, in plain words
+- topics: up to 8 news searches, specific beats ("human-computer interaction", "All Blacks")
+- subreddits: up to 6 names without r/
+- tickers: up to 10 Yahoo Finance symbols (AAPL, ^GSPC, AIR.NZ)
+- arxiv: up to 5 categories (cs.HC, cs.LG) for researchers
+- feeds: up to 6 RSS/Atom URLs you know exist
+- hacker_news: true for people in software or startups
+- city: their city, for the weather box
+- region: two-letter country code for their Google News edition
+Only include what you have reason to believe; leave a field out rather than guess.
+"""
+
+
+def build_mcp(store: Store, edit_url: str = "") -> MCPServer:
     mcp = MCPServer(
         "dailytimes",
         title="The Daily Times",
-        instructions="Use print_brief once a day to send the user's printed morning brief.",
+        instructions="Use print_brief once a day to send the user's printed morning brief. When the user "
+                     "first connects, call set_interests once with what you know about them.",
     )
 
     @mcp.tool(name="print_brief", title="Print today's brief", description=TOOL_DESCRIPTION)
@@ -91,6 +118,45 @@ def build_mcp(store: Store) -> MCPServer:
             raise ToolError(str(e)) from None
         return result.as_dict()
 
+    @mcp.tool(name="set_interests", title="Set what the auto edition covers", description=INTERESTS_DESCRIPTION)
+    def set_interests(
+        ctx: Context,
+        about: str | None = None,
+        topics: list[str] | None = None,
+        subreddits: list[str] | None = None,
+        tickers: list[str] | None = None,
+        arxiv: list[str] | None = None,
+        feeds: list[str] | None = None,
+        hacker_news: bool | None = None,
+        city: str | None = None,
+        region: str | None = None,
+    ) -> dict:
+        user = store.user_for_send_token(_token_from(ctx))
+        if user is None:
+            raise ToolError("unauthorized: missing or unknown Daily Times endpoint token")
+        given = {"about": about[:1000] if about else about, "topics": topics, "subreddits": subreddits,
+                 "tickers": tickers, "arxiv": arxiv, "feeds": feeds, "hacker_news": hacker_news,
+                 "region": region.upper() if region else region}
+        data = interests_of(user).model_dump() | {k: v for k, v in given.items() if v is not None} | {"set_by": "ai"}
+        note = None
+        if city:
+            try:
+                g = geocode(city)
+            except FetchError:
+                g, note = None, f"couldn't look up {city!r} right now; the city was not changed"
+            if g:
+                data["location"] = Location(name=g[0], lat=g[1], lon=g[2]).model_dump()
+            elif not note:
+                note = f"no place called {city!r}; the city was not changed"
+        try:
+            interests = Interests.model_validate(data)
+        except ValidationError as e:
+            raise ToolError(_friendly(e).replace("invalid brief", "invalid interests")) from None
+        store.update_user(user, interests=interests.model_dump())
+        saved = interests.model_dump(exclude={"set_by"})
+        saved["location"] = interests.location.name if interests.location else None
+        return {"saved": saved, "note": note, "review_url": edit_url or None}
+
     return mcp
 
 
@@ -98,8 +164,8 @@ class mcp_asgi:
     """ASGI endpoint for /mcp and /u/{token}/mcp. A class (not a function) so Starlette
     routes treat it as a raw ASGI app."""
 
-    def __init__(self, store: Store):
-        self.store = store
+    def __init__(self, store: Store, edit_url: str = ""):
+        self.store, self.edit_url = store, edit_url
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         token = (scope.get("path_params") or {}).get("token")
@@ -109,7 +175,7 @@ class mcp_asgi:
             scope["headers"] = headers + [(b"authorization", f"Bearer {token}".encode())]
         scope["path"] = "/mcp"
         scope["raw_path"] = b"/mcp"
-        server = build_mcp(self.store)
+        server = build_mcp(self.store, self.edit_url)
         inner = server.streamable_http_app(stateless_http=True, json_response=True, streamable_http_path="/mcp",
                                            host="0.0.0.0")
         async with server.session_manager.run():

@@ -1,45 +1,173 @@
 {% extends "base.html" %}
 {% block body %}
-<h1>Connect your AI</h1>
-<p class="lede">Your AI writes a personal edition from what it can see (your calendar, inbox, chats) and sends us only the finished page. One private endpoint works for every agent you use.</p>
+<h1>{{ "You're in. Now connect your AI" if welcome else "Connect your AI" }}</h1>
+<p class="lede">Your AI writes your edition from what it can see (your calendar, inbox, what it knows about you) and sends us only the finished page. It fills in your interests too, so there's nothing to type here.</p>
 
-{% if new %}
-<div class="box">
-  <p><b>Here's your endpoint. Copy it now:</b> we store only a fingerprint of it, so we can't show it again. Anyone with it can send you an edition, so treat it like a password.</p>
-  <label>MCP connector URL <span class="hint">Claude, ChatGPT, Codex, Claude Code</span></label>
-  <div class="copy"><input type="text" readonly value="{{ new.mcp_url }}" onclick="this.select()"></div>
-  <label>Webhook URL <span class="hint">POST JSON or plain text from scripts, n8n, Zapier, any agent with a shell</span></label>
-  <div class="copy"><input type="text" readonly value="{{ new.webhook_url }}" onclick="this.select()"></div>
-  <label>Email address <span class="hint">for assistants that can only send mail, if this server receives mail</span></label>
-  <div class="copy"><input type="text" readonly value="{{ new.email_address }}" onclick="this.select()"></div>
+{% if rotated %}<p class="notice">New link made. The old one has stopped working, so update any assistant that had it.</p>{% endif %}
+
+{% if ep %}
+<label for="mcp-url">Your connector link <span class="hint">Private: anyone with it can send you an edition, though it can't read anything.</span></label>
+<div class="copy"><input id="mcp-url" type="text" readonly value="{{ ep.mcp_url }}" onclick="this.select()"><button class="ghost" data-copy="mcp-url">Copy</button></div>
+{% else %}
+<div class="notice">
+  <p>Your link was made before this page could show it again. Make a new one to see it here; the old one stops working, so you'll add the new one to your assistant.</p>
+  <form method="post" action="/app/connect"><input type="hidden" name="csrf" value="{{ csrf }}"><button>Show me a new link</button></form>
 </div>
-{% elif has_endpoint %}
-<p class="notice">You have an endpoint. Lost it? Make a new one: the old one stops working immediately.</p>
 {% endif %}
-<form method="post" action="/app/connect">
-  <input type="hidden" name="csrf" value="{{ csrf }}">
-  <button>{{ "Make a new endpoint" if has_endpoint or new else "Create my endpoint" }}</button>
-</form>
+{% set url = ep.mcp_url if ep else "<your connector link>" %}
 
-<h2>Add it to your assistant</h2>
-<div class="cols">
-  <div>
-    <h3>Claude</h3>
-    <p>Settings → Connectors → <i>Add custom connector</i>. Paste the MCP URL. Turn it on in a chat, along with your calendar and Gmail connectors.</p>
-    <h3>ChatGPT</h3>
-    <p>Settings → Apps &amp; Connectors → developer mode → <i>Create</i>. Paste the MCP URL, no authentication.</p>
-  </div>
-  <div>
-    <h3>Claude Code, Codex, agents</h3>
-    <pre>claude mcp add --transport http dailytimes "&lt;MCP URL&gt;"</pre>
-    <p>or <code>[mcp_servers.dailytimes] url = "&lt;MCP URL&gt;"</code> in <code>~/.codex/config.toml</code>, or POST to the webhook:</p>
-    <pre>curl -X POST "&lt;webhook URL&gt;" -H "Content-Type: text/plain" --data-binary @brief.md</pre>
-  </div>
+<h2>1. Add it to your assistant</h2>
+<div class="tabs" role="tablist">
+  <button class="tab" data-tab="claude">Claude</button>
+  <button class="tab" data-tab="chatgpt">ChatGPT</button>
+  <button class="tab" data-tab="gemini">Gemini</button>
+  <button class="tab" data-tab="claude-code">Claude Code</button>
+  <button class="tab" data-tab="codex">Codex</button>
+  <button class="tab" data-tab="other">Something else</button>
+  <button class="tab" data-tab="none">I don't use one</button>
 </div>
 
-<h2>Then paste this prompt</h2>
-<p>It sets up a daily task. It already includes your paper size and interests; edit anything.</p>
+<section class="panel" id="tab-claude">
+  <h3>Claude <span class="muted small">claude.ai, the desktop app and the phone app</span></h3>
+  <ol class="steps">
+    <li>Open <a href="https://claude.ai/settings/connectors" target="_blank" rel="noopener">Settings → Connectors</a> on claude.ai (or in the desktop app).</li>
+    <li>Click <b>Add custom connector</b>. Name it <code>Daily Times</code>, paste your connector link as the URL, leave the advanced settings empty, and click <b>Add</b>.</li>
+    <li>Start a new chat. In the <b>+</b> menu, check that Daily Times is switched on (and your calendar and Gmail, if you use them).</li>
+    <li>Paste the prompt from step 2 into that chat.</li>
+  </ol>
+  <p class="notice">Pasting the link into a chat won't connect anything: Claude can only use Daily Times once it's added in Settings. After that it works on the web, desktop and phone.</p>
+</section>
+
+<section class="panel" id="tab-chatgpt">
+  <h3>ChatGPT</h3>
+  <ol class="steps">
+    <li>Open Settings → <b>Apps &amp; Connectors</b> → Advanced settings and turn on <b>Developer mode</b>. ChatGPT only offers this on paid plans.</li>
+    <li>Back in Apps &amp; Connectors, click <b>Create</b>. Name it <code>Daily Times</code>, paste your connector link as the MCP server URL, choose <b>No authentication</b>, tick that you trust it, and click <b>Create</b>.</li>
+    <li>Start a new chat, open the <b>+</b> menu, choose Developer mode and switch on Daily Times.</li>
+    <li>Paste the prompt from step 2 into that chat.</li>
+  </ol>
+</section>
+
+<section class="panel" id="tab-gemini">
+  <h3>Gemini</h3>
+  <p>If your Gemini app has no option to add a custom (MCP) connector, it can't send us an edition. Two ways around that:</p>
+  <ol class="steps">
+    <li><b>Gemini CLI</b> takes connectors. In a terminal, run:
+      <pre id="gemini-cmd">gemini mcp add --scope user --transport http dailytimes "{{ url }}"</pre>
+      <button class="ghost" data-copy="gemini-cmd">Copy command</button> Then start <code>gemini</code> again, check <code>/mcp</code> lists dailytimes, and paste the prompt from step 2.</li>
+    <li>Or skip the AI: <a href="/app/interests?welcome=1">tell us what you're into</a> and we'll build an edition every morning from public news.</li>
+  </ol>
+</section>
+
+<section class="panel" id="tab-claude-code">
+  <h3>Claude Code</h3>
+  <ol class="steps">
+    <li>In a terminal (not inside a Claude Code chat), run:
+      <pre id="cc-cmd">claude mcp add --scope user --transport http dailytimes "{{ url }}"</pre>
+      <button class="ghost" data-copy="cc-cmd">Copy command</button>
+      <p class="muted small"><code>--scope user</code> makes it work in every folder. Without it, Claude Code only loads it in the folder you ran the command in.</p></li>
+    <li>Quit Claude Code and start it again: it loads connectors at startup. Type <code>/mcp</code> and check <b>dailytimes</b> shows as connected.</li>
+    <li>Paste the prompt from step 2.</li>
+  </ol>
+  <p class="muted small">Claude Code only runs while it's open. For an edition that's ready when you wake up, add the link to Claude on claude.ai as well.</p>
+</section>
+
+<section class="panel" id="tab-codex">
+  <h3>Codex</h3>
+  <ol class="steps">
+    <li>In a terminal, run:
+      <pre id="codex-cmd">codex mcp add dailytimes --url "{{ url }}"</pre>
+      <button class="ghost" data-copy="codex-cmd">Copy command</button>
+      <p class="muted small">Or add this to <code>~/.codex/config.toml</code>:</p>
+      <pre id="codex-toml">[mcp_servers.dailytimes]
+url = "{{ url }}"</pre></li>
+    <li>Start Codex again and check <code>/mcp</code> lists dailytimes.</li>
+    <li>Paste the prompt from step 2.</li>
+  </ol>
+</section>
+
+<section class="panel" id="tab-other">
+  <h3>Cursor, Windsurf, n8n, scripts, anything else</h3>
+  <p>Any tool that speaks MCP over HTTP takes the connector link above, with no authentication. Tools without MCP can post to the webhook instead:</p>
+  {% if ep %}
+  <label for="webhook-url">Webhook <span class="hint">POST JSON or plain text</span></label>
+  <div class="copy"><input id="webhook-url" type="text" readonly value="{{ ep.webhook_url }}" onclick="this.select()"><button class="ghost" data-copy="webhook-url">Copy</button></div>
+  <pre>curl -X POST "{{ ep.webhook_url }}" -H "Content-Type: text/plain" --data-binary @brief.md</pre>
+  {% if email_enabled %}
+  <label for="email-addr">Email address <span class="hint">for assistants that can only send mail</span></label>
+  <div class="copy"><input id="email-addr" type="text" readonly value="{{ ep.email_address }}" onclick="this.select()"><button class="ghost" data-copy="email-addr">Copy</button></div>
+  {% endif %}
+  {% endif %}
+</section>
+
+<section class="panel" id="tab-none">
+  <h3>No AI assistant</h3>
+  <p>That's fine. We build an edition every morning from public news, prices and weather about what you follow. <a href="/app/interests?welcome=1">Tell us what you're into</a>; it takes a minute.</p>
+</section>
+
+<div id="ai-steps">
+<h2>2. Paste this prompt into a new chat</h2>
+<p>It asks your AI to fill in your interests and send an edition every morning. It already knows your paper size and timezone; edit anything.</p>
 <pre id="prompt">{{ prompt }}</pre>
-<button class="ghost" onclick="navigator.clipboard.writeText(document.getElementById('prompt').innerText); this.textContent='Copied'">Copy prompt</button>
-{% if welcome %}<p><a href="/app/printers">Next: pair a printer</a> or <a href="/app">skip to today's edition</a></p>{% endif %}
+<button class="ghost" data-copy="prompt">Copy prompt</button>
+
+<h2>3. Check it worked</h2>
+<ul class="status">
+  <li id="st-interests" class="{{ 'ok' if interests_by_ai }}">
+    <span class="wait">Waiting for your AI to fill in your interests…</span>
+    <span class="done">Your AI filled in your interests. <a href="/app/interests">Check them</a>.</span></li>
+  <li id="st-edition" class="{{ 'ok' if edition_by_ai }}">
+    <span class="wait">Waiting for its first edition…</span>
+    <span class="done">Today's edition arrived. <a href="/app">See it</a>.</span></li>
+</ul>
+</div>
+{% if welcome %}<p><a class="btn" href="/app/printers">Next: pair a printer</a> <a href="/app">or skip to today's edition</a></p>{% endif %}
+
+{% if ep %}
+<h2>Link leaked?</h2>
+<p class="muted">Make a new one. The old one stops working at once, and you'll need to add the new one to your assistants.</p>
+<form method="post" action="/app/connect" onsubmit="return confirm('Make a new link? The old one stops working right away.')">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost">Make a new link</button>
+</form>
+{% endif %}
+
+<script>
+(function () {
+  document.querySelectorAll("[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function (e) {
+      e.preventDefault();
+      var el = document.getElementById(b.dataset.copy);
+      var label = b.textContent;
+      navigator.clipboard.writeText(el.value !== undefined ? el.value : el.innerText).then(function () {
+        b.textContent = "Copied"; setTimeout(function () { b.textContent = label; }, 1500);
+      });
+    });
+  });
+
+  var tabs = document.querySelectorAll(".tab"), steps = document.getElementById("ai-steps");
+  function show(name) {
+    tabs.forEach(function (t) { t.classList.toggle("on", t.dataset.tab === name); t.setAttribute("aria-selected", t.dataset.tab === name); });
+    document.querySelectorAll(".panel").forEach(function (p) { p.hidden = p.id !== "tab-" + name; });
+    steps.hidden = name === "none";
+    try { localStorage.setItem("dt-assistant", name); } catch (e) {}
+  }
+  tabs.forEach(function (t) { t.addEventListener("click", function () { show(t.dataset.tab); }); });
+  var saved = null;
+  try { saved = localStorage.getItem("dt-assistant"); } catch (e) {}
+  show(document.getElementById("tab-" + saved) ? saved : "claude");
+
+  var started = Date.now();
+  function poll() {
+    var a = document.getElementById("st-interests"), b = document.getElementById("st-edition");
+    if ((a.classList.contains("ok") && b.classList.contains("ok")) || Date.now() - started > 30 * 60 * 1000) return;
+    if (!document.hidden) {
+      fetch("/app/connect/status", {credentials: "same-origin"}).then(function (r) { return r.json(); }).then(function (s) {
+        a.classList.toggle("ok", s.interests_by_ai); b.classList.toggle("ok", s.edition_by_ai);
+      }).catch(function () {});
+    }
+    setTimeout(poll, 4000);
+  }
+  setTimeout(poll, 4000);
+})();
+</script>
 {% endblock %}
